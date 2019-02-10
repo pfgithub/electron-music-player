@@ -8,7 +8,7 @@ A simple music player in electron
 
 Colors are set dynamically based on the 0th art of the song that is playing, enforcing a contrast ratio of at least 3:1
 
-Songs are currently listed from `~/Music`
+Drag a folder or a set of files to play them
 
 Lyrics are currently read from the Album field of the audio file. (For use with [mp3lyrics](https://github.com/pfgithub/mp3lyrics))
 
