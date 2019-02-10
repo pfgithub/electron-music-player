@@ -35,6 +35,10 @@
 	font-weight: bold;
 	position:sticky;
 	top:0;
+	-webkit-app-region: drag;
+}
+.nowplaying > *{
+	-webkit-app-region: no-drag;
 }
 .icon{
 	width:20px;
