@@ -10,7 +10,7 @@ Colors are set dynamically based on the 0th art of the song that is playing, enf
 
 Songs are currently listed from `~/Music`
 
-Lyrics are currently read from the Album field of the audio file.
+Lyrics are currently read from the Album field of the audio file. (For use with [mp3lyrics](https://github.com/pfgithub/mp3lyrics))
 
 ## Setup
 
