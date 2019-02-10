@@ -1,6 +1,7 @@
 :root{
 	--foreground:#fff;
 	--background: #000;
+	--background2: #000;
 }
 
 .columns{

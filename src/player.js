@@ -5,10 +5,11 @@ let config = {
 	minContrast: 3.0,
 	constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
 	lightMode: false,
-	updateSpeedLimit: 100 // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups. 
+	updateSpeedLimit: 100, // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups. 
+	maxMusicSearchDepth: 10 // Max search depth of folders in music added
 };
 
-const fs = require("fs");
+const fs = require("fs"); // .promises
 const os = require("os");
 const url = require("url");
 const path = require("path");
@@ -30,14 +31,18 @@ function playpause() {
 }
 
 let currentlyPlaying;
+let music = [];
 
-let music = fs.readdirSync(path.join(os.homedir(), "Music"))
-	.map(song => 
-		({
-			path: path.join(os.homedir(), "Music", song),
-			filename: song
-		})
-	);
+function addMusic(musicPath, depth = 1) {
+	if(depth > config.maxMusicSearchDepth) {return;} //workaround for circular symlinks
+	let lstat = fs.statSync(musicPath);
+	console.log(lstat.isDirectory());
+	if(lstat.isDirectory()) {
+		return fs.readdirSync(musicPath).forEach(subPath => addMusic(path.join(musicPath, subPath), depth + 1));
+	}
+	let song = {filename: path.basename(musicPath), path: musicPath};
+	music.push(song);
+}
 	
 
 let playlistFilter = song => {
@@ -101,19 +106,6 @@ function listMusic() {
 }
 elSearch.addEventListener("input", listMusic);
 
-function startLoadingMusic() {
-	listMusic();
-	loadMusic();
-}
-
-async function loadMusic() {
-	for(let song of music) {
-		song.tags = await readTags(song.path);
-		// update in song list
-		listMusic();
-	}
-}
-
 async function readTags(filename) {
 	let songTags = (await mm.parseFile(filename, {})).common;
 	if(songTags.picture && songTags.picture[0]) {
@@ -141,8 +133,19 @@ async function readTags(filename) {
 	return songTags;
 }
 
+async function loadMusic() {
+	for(let song of music) {
+		if(song.tags) {continue;}
+		song.tags = await readTags(song.path);
+		// update in song list
+		listMusic();
+	}
+}
+
 // load music
-startLoadingMusic();
+
+// addMusic(path.join(os.homedir(), "Music"));
+loadMusic();
 playRandom();
 
 elAudio.addEventListener("ended", () => {
@@ -159,6 +162,7 @@ elPrevious.addEventListener("click", () => {
 
 function playRandom() {
 	let randomMusic = music[Math.floor(Math.random()*music.length)];
+	if(!randomMusic) {return;}
 	playSong(randomMusic);
 }
 
@@ -200,3 +204,29 @@ async function playSong(song) {
 		document.documentElement.style.setProperty("--background2", "#000");
 	}
 }
+
+let holder = document;
+
+holder.ondragover = () => {
+	return false;
+};
+
+holder.ondragleave = () => {
+	return false;
+};
+
+holder.ondragend = () => {
+	return false;
+};
+
+holder.ondrop = (e) => {
+	e.preventDefault();
+	
+	console.log("Adding", e.dataTransfer.files.length, "files.");
+	for (let f of e.dataTransfer.files) {
+		addMusic(f.path);
+	}
+	loadMusic();
+			
+	return false;
+};
