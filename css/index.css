@@ -3,6 +3,19 @@
 	--background: #000;
 	--background2: #000;
 }
+.verticallist{
+	display: flex;
+	flex-flow: column;
+}
+.vlitem{
+	
+}
+#nowplaying_title{
+	font-weight: bold;
+}
+#nowplaying_artist{
+	font-style:italic;
+}
 
 .columns{
 	display: flex;
@@ -32,9 +45,9 @@
 .nowplaying{
 	background: linear-gradient(to top, var(--background2), var(--background));
 	box-shadow: 0px 10px 20px 0px var(--background2);
-	font-weight: bold;
 	position:sticky;
 	top:0;
+	display:flex;
 	-webkit-app-region: drag;
 }
 .nowplaying > *{
@@ -62,7 +75,7 @@ body > div{
 ::-webkit-scrollbar-thumb {
 	background: var(--foreground);
 }
-button, input{
+input{
 	background-color: var(--background);
 	color: var(--foreground);
 	border: 2px solid var(--foreground);
@@ -90,4 +103,23 @@ li:hover > .icon{
 li > a{
 	color:inherit;
 	text-decoration: none;
+}
+.menubtn{
+	width:40px;
+	height:40px;
+}
+.menupath{
+	fill: var(--foreground);
+}
+.btnplay{
+	display:none;
+}
+.btnpause{
+	display:none;
+}
+#playpause.play > .btnplay{display:block;}
+#playpause:not(.play) > .btnpause{display:block;}
+button{
+	background-color:transparent;
+	border:none;
 }

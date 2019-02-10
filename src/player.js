@@ -23,11 +23,22 @@ let elSkip = document.getElementById("skip");
 let elPrevious = document.getElementById("previous");
 let elSonglist = document.getElementById("songlist");
 let elSearch = document.getElementById("search");
+let elPlaypause = document.getElementById("playpause");
 
-document.getElementById("playpause").addEventListener("click", playpause);
+elPlaypause.addEventListener("click", e => {
+	e.preventDefault();
+	playpause(); 
+});
 
-function playpause() {
-	if(elAudio.paused) {elAudio.play();} else {elAudio.pause();}
+function playpause(value) {
+	if(value === undefined) {return playpause(elAudio.paused);}
+	if(value) {
+		elAudio.play();
+		elPlaypause.classList.add("play");
+	} else {
+		elAudio.pause();
+		elPlaypause.classList.remove("play");
+	}
 }
 
 let currentlyPlaying;
@@ -144,7 +155,7 @@ async function loadMusic() {
 
 // load music
 
-// addMusic(path.join(os.homedir(), "Music"));
+addMusic(path.join(os.homedir(), "Music"));
 loadMusic();
 playRandom();
 
@@ -152,11 +163,13 @@ elAudio.addEventListener("ended", () => {
 	playRandom();
 });
 
-elSkip.addEventListener("click", () => {
+elSkip.addEventListener("click", e => {
+	e.preventDefault();
 	playRandom();
 });
 
-elPrevious.addEventListener("click", () => {
+elPrevious.addEventListener("click", e => {
+	e.preventDefault();
 	playRandom();
 });
 
@@ -171,7 +184,7 @@ async function playSong(song) {
 	listMusic();
 	
 	elAudio.src = song.path;
-	elAudio.play();
+	playpause(true);
 	
 	let elArt = document.getElementById("nowplaying_art");
 	let elTitle = document.getElementById("nowplaying_title");
