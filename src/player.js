@@ -38,11 +38,8 @@ let music = fs.readdirSync(path.join(os.homedir(), "Music"))
 	);
 
 function startLoadingMusic() {
-	elSonglist.innerText = "";
 	music.forEach(song => {
-		song.dom = document.createElement("li");
-		song.dom.innerText = song.path;
-		elSonglist.appendChild(song.dom);
+		// add to song list
 	});
 	loadMusic();
 }
@@ -50,11 +47,7 @@ function startLoadingMusic() {
 async function loadMusic() {
 	for(let song of music) {
 		song.tags = await readTags(song.path);
-		song.dom.innerText = `${song.tags.title} by ${song.tags.artist}`;
-		let img = document.createElement("img");
-		img.src = song.tags.art;
-		img.classList.add("icon");
-		song.dom.appendChild(img);
+		// update in song list
 	}
 }
 
