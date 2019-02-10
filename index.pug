@@ -1,0 +1,29 @@
+doctype html
+html
+	head
+		meta(charset='UTF-8')
+		meta(http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; media-src 'self'; img-src 'self' data:")
+		link(rel="stylesheet", href="css/index.css")
+		title Hello World!
+	body
+		.nowplaying#nowplaying
+			img#nowplaying_art(src="...")
+			button#previous &lt;&lt;
+			button#playpause play/pause
+			button#skip &gt;&gt;
+			| Now Playing: 
+			span#nowplaying_title ...
+			|  by 
+			span#nowplaying_artist ...
+			|  (
+			span#nowplaying_filename ...
+			| )
+			audio#nowplaying_audio(src="...")
+			// TODO use vibrant to get image colors
+		.columns
+			.column
+				input#search(type='text', placeholder='Search...')
+				ul#songlist ...
+			.column
+				p#nowplaying_lyrics ...
+		script(src="renderer.js")

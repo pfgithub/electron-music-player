@@ -1,0 +1,62 @@
+:root{
+	--foreground:#fff;
+	--background: #000;
+}
+
+.columns{
+	display: flex;
+	flex-flow: wrap
+}
+
+@media screen and (max-width: 600px) {
+	.columns {
+		flex-direction: vertical;
+	}
+
+	.column{
+		flex-grow: 1;
+		flex-basis: 0;
+	}
+}
+
+.column{
+	flex-grow: 1;
+	flex-basis: 0;
+}
+
+#nowplaying_art{
+	width:60px;
+	height:60px;
+}
+.nowplaying{
+	background: linear-gradient(to bottom, var(--background), #000000);
+	font-weight: bold;
+}
+.icon{
+	width:20px;
+	height:20px;
+}
+body{
+	background-color:#000;
+	color:var(--foreground);
+	padding: 0;
+	margin: 0;
+	font-family:sans-serif;
+}
+body > div{
+	padding: 20px;
+}
+::-webkit-scrollbar {
+	width: 4px;  /* remove scrollbar space */
+	background: var(--background);  /* optional: just make scrollbar invisible */
+}
+/* optional: show position indicator in red */
+::-webkit-scrollbar-thumb {
+	background: var(--foreground);
+}
+button, input{
+	background-color: var(--background);
+	color: var(--foreground);
+	border: 2px solid var(--foreground);
+	border-radius: 2px;
+}
