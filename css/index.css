@@ -31,6 +31,8 @@
 .nowplaying{
 	background: linear-gradient(to bottom, var(--background), var(--background2));
 	font-weight: bold;
+	position:sticky;
+	top:0;
 }
 .icon{
 	width:20px;
@@ -59,4 +61,27 @@ button, input{
 	color: var(--foreground);
 	border: 2px solid var(--foreground);
 	border-radius: 2px;
+}
+ul{
+	padding-left: 0;
+}
+li{
+	list-style-type: none;
+}
+li.playing{
+	background-color: var(--background);
+}
+li:hover{
+	background-color: var(--track-foreground);
+	color: var(--track-background);
+}
+.icon{
+	visibility: hidden;
+}
+li:hover > .icon{
+	visibility: visible;
+}
+li > a{
+	color:inherit;
+	text-decoration: none;
 }
