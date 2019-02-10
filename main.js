@@ -29,7 +29,7 @@ function createWindow() {
 		}
 	});
 
-	Menu.setApplicationMenu(menu);
+	// Menu.setApplicationMenu(menu);
 	mainWindow.setMenuBarVisibility(false);
 
 	mainWindow.loadFile("index.pug");
