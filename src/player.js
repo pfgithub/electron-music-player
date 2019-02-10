@@ -4,7 +4,7 @@
 let config = {
 	minContrast: 3.0,
 	constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
-	lightMode: true,
+	lightMode: false,
 	updateSpeedLimit: 100 // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups. 
 };
 

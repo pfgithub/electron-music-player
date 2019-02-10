@@ -29,7 +29,8 @@
 	height:60px;
 }
 .nowplaying{
-	background: linear-gradient(to bottom, var(--background), var(--background2));
+	background: linear-gradient(to top, var(--background2), var(--background));
+	box-shadow: 0px 10px 20px 0px var(--background2);
 	font-weight: bold;
 	position:sticky;
 	top:0;
