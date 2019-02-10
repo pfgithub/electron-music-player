@@ -29,7 +29,7 @@
 	height:60px;
 }
 .nowplaying{
-	background: linear-gradient(to bottom, var(--background), #000000);
+	background: linear-gradient(to bottom, var(--background), var(--background2));
 	font-weight: bold;
 }
 .icon{
@@ -37,7 +37,7 @@
 	height:20px;
 }
 body{
-	background-color:#000;
+	background-color:var(--background2);
 	color:var(--foreground);
 	padding: 0;
 	margin: 0;

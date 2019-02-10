@@ -3,7 +3,8 @@
 
 let config = {
 	minContrast: 3.0,
-	constrastStepChange: 0.25 // How quickly to change background and foreground colors when fixing contrast
+	constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
+	lightMode: false
 };
 
 const fs = require("fs");
@@ -115,19 +116,24 @@ async function playSong(song) {
 	let vibrant = Vibrant.from(songTags.artBuffer);
 	let swatches = await vibrant.getSwatches();
 	
-	let background = Color(swatches.DarkVibrant.hex);
-	let foreground = Color(swatches.LightVibrant.hex);
+	let dark = Color(swatches.DarkVibrant.hex);
+	let light = Color(swatches.LightVibrant.hex);
 	
-	let contrastRatio = background.contrast(foreground);
-	console.log("Contrast: ", contrastRatio);
+	let contrastRatio = dark.contrast(light);
 	
 	while(contrastRatio < config.minContrast) {
-		background = background.darken(config.constrastStepChange);
-		foreground = foreground.lighten(config.constrastStepChange);
-		contrastRatio = background.contrast(foreground);
-		console.log("Contrast: ", contrastRatio);
+		dark = dark.darken(config.constrastStepChange);
+		light = light.lighten(config.constrastStepChange);
+		contrastRatio = dark.contrast(light);
 	}
 	
-	document.documentElement.style.setProperty("--foreground", foreground.hex());
-	document.documentElement.style.setProperty("--background", background.hex());
+	if(config.lightMode) {
+		document.documentElement.style.setProperty("--foreground", dark.hex());
+		document.documentElement.style.setProperty("--background", light.hex());
+		document.documentElement.style.setProperty("--background2", "#fff");
+	}else{
+		document.documentElement.style.setProperty("--foreground", light.hex());
+		document.documentElement.style.setProperty("--background", dark.hex());
+		document.documentElement.style.setProperty("--background2", "#000");
+	}
 }
