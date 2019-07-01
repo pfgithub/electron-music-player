@@ -198,6 +198,7 @@ elSkip.addEventListener("click", e => {
 
 elPrevious.addEventListener("click", e => {
 	e.preventDefault();
+	history.pop();
 	let song = history.pop();
 	if(song) {playSong(song);} else {playRandom();}
 });
