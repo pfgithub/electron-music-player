@@ -20,16 +20,39 @@ const uuidv4 = require("uuid/v4");
 const mm = require("music-metadata");
 const Vibrant = require("node-vibrant");
 
-let elAudio = document.getElementById("nowplaying_audio");
-let elSkip = document.getElementById("skip");
-let elPrevious = document.getElementById("previous");
-let elSonglist = document.getElementById("songlist");
-let elSearch = document.getElementById("search");
-let elPlaypause = document.getElementById("playpause");
+function forceElementById/*::<T>*/(id/*: string*/, type/*: Class<T>*/)/*: T*/ {
+	let el = document.getElementById(id);
+	if(!el) {
+		alert(`The element ${id} was missing during initialization.`);
+		throw new Error(`The element ${id} was missing during initialization.`);
+	}
+	if(!(el instanceof type)) {
+		alert(`The element ${id} was not of the correct type during initialization.`);
+		throw new Error(`The element ${id} was not of the correct type during initialization.`);
+	}
+	return el;
+}
+
+let elAudio = forceElementById("nowplaying_audio", HTMLAudioElement);
+let elSkip = forceElementById("skip", HTMLButtonElement);
+let elPrevious = forceElementById("previous", HTMLButtonElement);
+let elSonglist = forceElementById("songlist", HTMLUListElement);
+let elSearch = forceElementById("search", HTMLInputElement);
+let elPlaypause = forceElementById("playpause", HTMLButtonElement);
+
+if(!elAudio || !elSkip || !elPrevious || !elSonglist || !elSearch || !elPlaypause) {
+	alert("An element was missing during initialization.");
+	throw new Error("An element was missing during initialization.");
+}
+
+if(!(elAudio instanceof HTMLAudioElement)) {
+	alert("Audio element was incorrect during initialization.");
+	throw new Error("Audio element element was incorrect during initialization.");
+}
 
 let history = [];
 
-elPlaypause.addEventListener("click", e => {
+elPlaypause.addEventListener("click", (e/*: MouseEvent*/) => {
 	e.preventDefault();
 	playpause(); 
 });
@@ -46,7 +69,7 @@ function playpause(value) {
 }
 
 let currentlyPlaying;
-let music = [];
+let music/*: {filename: string, path: string, uuid: string, tags: any}[]*/ = [];
 
 function addMusic(musicPath, depth = 1) {
 	if(depth > config.maxMusicSearchDepth) {return;} //workaround for circular symlinks
@@ -55,7 +78,7 @@ function addMusic(musicPath, depth = 1) {
 	if(lstat.isDirectory()) {
 		return fs.readdirSync(musicPath).forEach(subPath => addMusic(path.join(musicPath, subPath), depth + 1));
 	}
-	let song = {filename: path.basename(musicPath), path: musicPath, uuid: uuidv4()};
+	let song = {filename: path.basename(musicPath), path: musicPath, uuid: uuidv4(), tags: undefined};
 	music.push(song);
 }
 	
@@ -89,7 +112,7 @@ function listMusic() {
 	}
 	let newList = document.createElement("ul");
 	newList.setAttribute("id", "songlist");
-	let loadCount;
+	let loadCount = 0;
 	music.forEach(song => {
 		if(!playlistFilter(song)) {return;}
 		let li = document.createElement("li");
@@ -104,7 +127,7 @@ function listMusic() {
 			li.appendChild(icon);
 		}
 		let title = document.createElement("span");
-		li.addEventListener("click", e => {
+		li.addEventListener("click", (e/*: MouseEvent*/) => {
 			e.preventDefault();
 			playSong(song);
 		});
@@ -132,7 +155,7 @@ function listMusic() {
 		}
 		newList.appendChild(li);
 	});
-	elSonglist.parentNode.replaceChild(newList, elSonglist);
+	elSonglist.parentNode && elSonglist.parentNode.replaceChild(newList, elSonglist);
 	elSonglist = newList;
 	lastList = (new Date).getTime();
 	
@@ -191,12 +214,12 @@ elAudio.addEventListener("ended", () => {
 	playRandom();
 });
 
-elSkip.addEventListener("click", e => {
+elSkip.addEventListener("click", (e/*: MouseEvent*/) => {
 	e.preventDefault();
 	playRandom();
 });
 
-elPrevious.addEventListener("click", e => {
+elPrevious.addEventListener("click", (e/*: MouseEvent*/) => {
 	e.preventDefault();
 	history.pop();
 	let song = history.pop();
@@ -219,12 +242,12 @@ async function playSong(song) {
 	elAudio.src = song.path;
 	playpause(true);
 	
-	let elArt = document.getElementById("nowplaying_art");
-	let elTitle = document.getElementById("nowplaying_title");
-	let elArtist = document.getElementById("nowplaying_artist");
-	let elLyrics = document.getElementById("nowplaying_lyrics");
-	let elFilename = document.getElementById("nowplaying_filename");
-	let elNowPlaying = document.getElementById("nowplaying");
+	let elArt = forceElementById("nowplaying_art", HTMLImageElement);
+	let elTitle = forceElementById("nowplaying_title", HTMLSpanElement);
+	let elArtist = forceElementById("nowplaying_artist", HTMLSpanElement);
+	let elLyrics = forceElementById("nowplaying_lyrics", HTMLDivElement);
+	let elFilename = forceElementById("nowplaying_filename", HTMLSpanElement);
+	let elNowPlaying = forceElementById("nowplaying", HTMLDivElement);
 	
 	elFilename.innerText = song.filename;
 	
@@ -241,30 +264,40 @@ async function playSong(song) {
 	if(!songTags.color) {return;}
 	
 	if(config.lightMode) {
+		//$FlowFixMe
 		document.documentElement.style.setProperty("--foreground", songTags.color.dark.hex());
+		//$FlowFixMe
 		document.documentElement.style.setProperty("--background", songTags.color.light.hex());
+		//$FlowFixMe
 		document.documentElement.style.setProperty("--background2", "#fff");
 	}else{
+		//$FlowFixMe
 		document.documentElement.style.setProperty("--foreground", songTags.color.light.hex());
+		//$FlowFixMe
 		document.documentElement.style.setProperty("--background", songTags.color.dark.hex());
+		//$FlowFixMe
 		document.documentElement.style.setProperty("--background2", "#000");
 	}
 }
 
 let holder = document;
 
+//$FlowFixMe
 holder.ondragover = () => {
 	return false;
 };
 
+//$FlowFixMe
 holder.ondragleave = () => {
 	return false;
 };
 
+//$FlowFixMe
 holder.ondragend = () => {
 	return false;
 };
 
+//$FlowFixMe
 holder.ondrop = (e) => {
 	e.preventDefault();
 	
