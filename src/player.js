@@ -245,7 +245,7 @@ async function playSong(song) {
 	let elArt = forceElementById("nowplaying_art", HTMLImageElement);
 	let elTitle = forceElementById("nowplaying_title", HTMLSpanElement);
 	let elArtist = forceElementById("nowplaying_artist", HTMLSpanElement);
-	let elLyrics = forceElementById("nowplaying_lyrics", HTMLDivElement);
+	let elLyrics = forceElementById("nowplaying_lyrics", HTMLParagraphElement);
 	let elFilename = forceElementById("nowplaying_filename", HTMLSpanElement);
 	let elNowPlaying = forceElementById("nowplaying", HTMLDivElement);
 	
