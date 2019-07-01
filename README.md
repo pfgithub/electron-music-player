@@ -1,10 +1,5 @@
 > Note: This project is very WIP.
 
-<p align="center">
-  <a href="" rel="noopener">
- <img height=200px src=".github/demo-2019-06-30_21-51.png" alt="electron music player demo image"></a>
-</p>
-
 # electron-music-player
 
 ![build passing](https://img.shields.io/badge/build-passing-green.svg) ![zero code coverage](https://img.shields.io/badge/coverage-0%25-red.svg)
@@ -56,7 +51,7 @@ electron-music-player has industry-standard accessability support. Screenreader 
 
 ### Light Mode (experimental)
 
-electron-music-player's experimental light mode can be enabled by setting config: lightMode: true in player.js. Unlike other light modes in apps, electron-music-player will only partially burn your eyes out in light mode because of the stunning smooth gradient in the background.
+electron-music-player's experimental light mode can be enabled by setting config: lightMode: true in player.js. Unlike other light modes in apps, electron-music-player will only partially burn your eyes out in light mode thanks to the stunning smooth gradient in the background.
 
 ## Setup
 
