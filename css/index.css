@@ -138,3 +138,6 @@ button{
 		transform: rotate(360deg);
 	}
 }
+.skipback{
+	transform: rotate(180deg);
+}

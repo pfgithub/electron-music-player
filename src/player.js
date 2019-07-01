@@ -198,7 +198,8 @@ elSkip.addEventListener("click", e => {
 
 elPrevious.addEventListener("click", e => {
 	e.preventDefault();
-	playRandom();
+	let song = history.pop();
+	if(song) {playSong(song);} else {playRandom();}
 });
 
 function playRandom() {
@@ -208,6 +209,9 @@ function playRandom() {
 }
 
 async function playSong(song) {
+	history.push(song);
+	if(history.length > 1000) {history.shift();}
+	
 	currentlyPlaying = song.path;
 	listMusic();
 	
