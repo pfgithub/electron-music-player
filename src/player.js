@@ -1,8 +1,10 @@
+// @flow
+
 /* eslint-env node, browser */
 /* global Promise Proxy */
 
 let config = {
-	minContrast: 3.0,
+	minContrast: 5.0,
 	constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
 	lightMode: false,
 	updateSpeedLimit: 100, // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups. 
@@ -14,7 +16,7 @@ const os = require("os");
 const url = require("url");
 const path = require("path");
 const Color = require("color");
-const uuid = require("uuid/v4");
+const uuidv4 = require("uuid/v4");
 const mm = require("music-metadata");
 const Vibrant = require("node-vibrant");
 
@@ -24,6 +26,8 @@ let elPrevious = document.getElementById("previous");
 let elSonglist = document.getElementById("songlist");
 let elSearch = document.getElementById("search");
 let elPlaypause = document.getElementById("playpause");
+
+let history = [];
 
 elPlaypause.addEventListener("click", e => {
 	e.preventDefault();
@@ -51,7 +55,7 @@ function addMusic(musicPath, depth = 1) {
 	if(lstat.isDirectory()) {
 		return fs.readdirSync(musicPath).forEach(subPath => addMusic(path.join(musicPath, subPath), depth + 1));
 	}
-	let song = {filename: path.basename(musicPath), path: musicPath};
+	let song = {filename: path.basename(musicPath), path: musicPath, uuid: uuidv4()};
 	music.push(song);
 }
 	
@@ -62,11 +66,20 @@ let playlistFilter = song => {
 		searchdata += ` ${song.tags.title} ${song.tags.author} ${song.tags.album}`;
 	}
 	searchdata = searchdata.toLowerCase();
-	return searchdata.indexOf(elSearch.value.toLowerCase()) > -1;
+	
+	let searchTerm = elSearch.value.toLowerCase();
+	return searchTerm.split(" ").every(i => searchdata.indexOf(i) > -1 ? (searchdata = searchdata.replace(i, ""), true) : false);
 };
 
 let lastList = 0;
 let llTimeout;
+
+function createLoadingSpinner() {
+	let el = document.createElement("span");
+	// el.classList.add("loading");
+	el.innerText = "... ";
+	return el;
+}
 
 function listMusic() {
 	if((new Date).getTime() - config.updateSpeedLimit < lastList) {
@@ -76,21 +89,28 @@ function listMusic() {
 	}
 	let newList = document.createElement("ul");
 	newList.setAttribute("id", "songlist");
+	let loadCount;
 	music.forEach(song => {
 		if(!playlistFilter(song)) {return;}
 		let li = document.createElement("li");
+		if(!song.tags) {
+			li.appendChild(createLoadingSpinner());
+			loadCount++;
+		}
 		if(song.tags && song.tags.art) {
 			let icon = document.createElement("img");
 			icon.src = song.tags.art;
 			icon.classList.add("icon");
 			li.appendChild(icon);
 		}
-		let title  = document.createElement("a");
-		title.href = "#";
-		title.addEventListener("click", e => {
+		let title = document.createElement("span");
+		li.addEventListener("click", e => {
 			e.preventDefault();
 			playSong(song);
 		});
+		li.setAttribute("role", "button");
+		li.setAttribute("aria-pressed", "false");
+		li.setAttribute("tabindex", "0");
 		if(song.tags && song.tags.title && song.tags.artist) {
 			title.innerText = (`${song.tags.title} by ${song.tags.artist}`);
 		}else{
@@ -99,6 +119,7 @@ function listMusic() {
 		li.appendChild(title);
 		if(currentlyPlaying === song.path) {
 			li.classList.add("playing");
+			li.setAttribute("aria-pressed", "true");
 		}
 		if(song.tags && song.tags.color) {
 			if(config.lightMode) {
@@ -114,6 +135,13 @@ function listMusic() {
 	elSonglist.parentNode.replaceChild(newList, elSonglist);
 	elSonglist = newList;
 	lastList = (new Date).getTime();
+	
+	if(loadCount > 0) {
+		let li = document.createElement("li");
+		li.appendChild(createLoadingSpinner());
+		li.innerText = `Loading ${loadCount} more songs...`;
+		newList.appendChild(li);
+	}
 }
 elSearch.addEventListener("input", listMusic);
 
