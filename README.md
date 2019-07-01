@@ -44,7 +44,7 @@ One of the newest advances in electron-music-player's groundbreaking technology 
 
 ### System Integration
 
-electron-music-player fits right into your system, just like any other native app. Files can be dragged in to electron-music-player to add them to the playlist. Sometimes, the window can be dragged by clicking and dragging on the now playing section. electron-music-player's web components look and feel exactly like native web components. On Mac, the traffic light buttons are beautifully overlayed on the top left corner of electron-music-player, half-covering the album art of the song that is playing.
+electron-music-player fits right into your system, just like any other native app. Files and folders can be dragged into electron-music-player to add them to the playlist. Sometimes, the window can be dragged by clicking and dragging on the now playing section. electron-music-player's web components look and feel exactly like native web components. On Mac, the traffic light buttons are beautifully overlayed on the top left corner of electron-music-player, half-covering the album art of the song that is playing.
 
 ### Advanced Shuffle Algorithm
 
