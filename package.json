@@ -50,7 +50,7 @@
 	},
 	"dependencies": {
 		"color": "^3.1.0",
-		"electron-pug": "^2.0.0",
+		"electron": "^6.0.0",
 		"music-metadata": "^3.5.2",
 		"node-vibrant": "^3.2.0-alpha",
 		"uuid": "^3.3.2"

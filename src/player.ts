@@ -321,52 +321,42 @@ async function playSong(song: MusicData) {
 	}
 
 	if (config.lightMode) {
-		//$FlowFixMe
 		document.documentElement.style.setProperty(
 			'--foreground',
 			songTags.color.dark.hex(),
 		)
-		//$FlowFixMe
 		document.documentElement.style.setProperty(
 			'--background',
 			songTags.color.light.hex(),
 		)
-		//$FlowFixMe
 		document.documentElement.style.setProperty('--background2', '#fff')
 	} else {
-		//$FlowFixMe
 		document.documentElement.style.setProperty(
 			'--foreground',
 			songTags.color.light.hex(),
 		)
-		//$FlowFixMe
 		document.documentElement.style.setProperty(
 			'--background',
 			songTags.color.dark.hex(),
 		)
-		//$FlowFixMe
 		document.documentElement.style.setProperty('--background2', '#000')
 	}
 }
 
 let holder = document
 
-//$FlowFixMe
 holder.ondragover = () => {
 	return false
 }
 
-//$FlowFixMe
 holder.ondragleave = () => {
 	return false
 }
 
-//$FlowFixMe
 holder.ondragend = () => {
 	return false
 }
 
-//$FlowFixMe
 holder.ondrop = e => {
 	e.preventDefault()
 

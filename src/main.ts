@@ -1,10 +1,9 @@
 // Modules to control application life and create native browser windows
-const { app, BrowserWindow, Menu, MenuItem } = require('electron')
-const locals = {}
+import { app, BrowserWindow, Menu, MenuItem } from 'electron'
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
-let mainWindow
+let mainWindow: BrowserWindow
 
 const menu = new Menu()
 
