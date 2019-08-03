@@ -1,5 +1,3 @@
-// @flow
-
 /* eslint-env node, browser */
 /* global Promise Proxy */
 
@@ -11,31 +9,26 @@ let config = {
 	maxMusicSearchDepth: 10, // Max search depth of folders in music added
 }
 
-const fs = require('fs') // .promises
-const os = require('os')
-const url = require('url')
-const path = require('path')
-const Color = require('color')
-const uuidv4 = require('uuid/v4')
-const mm = require('music-metadata')
-const Vibrant = require('node-vibrant')
+import * as fs from 'fs' // .promises
+import * as os from 'os'
+import * as url from 'url'
+import * as path from 'path'
+import Color from 'color'
+import * as mm from 'music-metadata'
+import * as Vibrant from 'node-vibrant'
 
-function forceElementById /*::<T>*/(
-	id /*: string*/,
-	type /*: Class<T>*/,
-) /*: T*/ {
-	let el = document.getElementById(id)
+function forceElementById<T extends HTMLElement>(
+	elid: string,
+	type: { new (): T },
+) {
+	const el = document.getElementById(elid)
 	if (!el) {
-		alert(`The element ${id} was missing during initialization.`)
-		throw new Error(`The element ${id} was missing during initialization.`)
+		alert(`The element ${el} does not exist`)
+		throw new Error('!el')
 	}
 	if (!(el instanceof type)) {
-		alert(
-			`The element ${id} was not of the correct type during initialization.`,
-		)
-		throw new Error(
-			`The element ${id} was not of the correct type during initialization.`,
-		)
+		alert(`The element ${el} #${elid} was not of the expected type ${type}`)
+		throw new Error('!el instanceof type')
 	}
 	return el
 }
@@ -66,14 +59,16 @@ if (!(elAudio instanceof HTMLAudioElement)) {
 	)
 }
 
-let history = []
+type MusicData = { filename: string; path: string; uuid: Symbol; tags: any }
+
+let history: MusicData[] = []
 
 elPlaypause.addEventListener('click', (e /*: MouseEvent*/) => {
 	e.preventDefault()
 	playpause()
 })
 
-function playpause(value) {
+function playpause(value?: boolean): void {
 	if (value === undefined) {
 		return playpause(elAudio.paused)
 	}
@@ -87,7 +82,7 @@ function playpause(value) {
 }
 
 let currentlyPlaying
-let music /*: {filename: string, path: string, uuid: string, tags: any}[]*/ = []
+let music: MusicData[] = []
 
 function addMusic(musicPath, depth = 1) {
 	if (depth > config.maxMusicSearchDepth) {
@@ -105,7 +100,7 @@ function addMusic(musicPath, depth = 1) {
 	let song = {
 		filename: path.basename(musicPath),
 		path: musicPath,
-		uuid: uuidv4(),
+		uuid: Symbol(musicPath),
 		tags: undefined,
 	}
 	music.push(song)
@@ -240,7 +235,7 @@ async function readTags(filename) {
 
 		songTags.color = { dark, light }
 	} else {
-		songTags.art = `resources/no_art.png`
+		songTags.art = `no_art.png`
 		songTags.color = { dark: Color('#f00'), light: Color('#fff') }
 	}
 	return songTags

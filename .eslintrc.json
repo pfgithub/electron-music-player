@@ -1,8 +1,8 @@
 {
 	// http://eslint.org/docs/rules/
-	"parser": "esprima",
+	"parser": "@typescript-eslint/parser",
 	"parserOptions": {
-		"ecmaVersion": 2017,
+		"ecmaVersion": 2019,
 		"sourceType": "module"
 	},
 
@@ -15,6 +15,7 @@
 		"phantomjs": false, // phantomjs global variables.
 		"jquery": false, // jquery global variables.
 		"prototypejs": false, // prototypejs global variables.
+		"es6": true,
 		"shelljs": false // shelljs global variables.
 	},
 
@@ -24,6 +25,7 @@
 
 	"plugins": [
 		// e.g. "react" (must run `npm install eslint-plugin-react` first)
+		"@typescript-eslint/eslint-plugin"
 	],
 
 	"rules": {

@@ -1,7 +1,6 @@
 // Modules to control application life and create native browser windows
 const { app, BrowserWindow, Menu, MenuItem } = require('electron')
 const locals = {}
-const setupPug = require('electron-pug')
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
@@ -32,7 +31,7 @@ function createWindow() {
 	// Menu.setApplicationMenu(menu);
 	mainWindow.setMenuBarVisibility(false)
 
-	mainWindow.loadFile('index.pug')
+	mainWindow.loadFile('dist/player.html')
 
 	mainWindow.on('closed', () => {
 		mainWindow = null
@@ -40,8 +39,6 @@ function createWindow() {
 }
 
 app.on('ready', async () => {
-	let pug = await setupPug({ pretty: true }, locals)
-	pug.on('error', err => console.error('electron-pug error', err))
 	createWindow()
 })
 

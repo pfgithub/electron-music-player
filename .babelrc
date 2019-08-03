@@ -1,0 +1,8 @@
+{
+	"presets": ["@babel/preset-typescript"],
+	"plugins": [
+		"transform-inline-scss",
+		"@babel/plugin-syntax-dynamic-import",
+		"babel-plugin-transform-es2015-modules-commonjs"
+	]
+}
