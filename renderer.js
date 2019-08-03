@@ -1,1 +1,1 @@
-require("./src/player");
+require('./src/player')

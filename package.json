@@ -1,31 +1,32 @@
 {
-  "name": "electron-quick-start",
-  "version": "1.0.0",
-  "description": "A minimal Electron application",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron ."
-  },
-  "repository": "https://github.com/electron/electron-quick-start",
-  "keywords": [
-    "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
-  ],
-  "author": "GitHub",
-  "license": "CC0-1.0",
-  "devDependencies": {
-    "electron": "^4.0.3",
-    "flow": "^0.2.3",
-    "flow-bin": "^0.102.0"
-  },
-  "dependencies": {
-    "color": "^3.1.0",
-    "electron-pug": "^2.0.0",
-    "music-metadata": "^3.5.2",
-    "node-vibrant": "^3.2.0-alpha",
-    "uuid": "^3.3.2"
-  }
+	"name": "electron-quick-start",
+	"version": "1.0.0",
+	"description": "A minimal Electron application",
+	"main": "main.js",
+	"scripts": {
+		"start": "electron ."
+	},
+	"repository": "https://github.com/electron/electron-quick-start",
+	"keywords": [
+		"Electron",
+		"quick",
+		"start",
+		"tutorial",
+		"demo"
+	],
+	"author": "GitHub",
+	"license": "CC0-1.0",
+	"devDependencies": {
+		"electron": "^4.0.3",
+		"flow": "^0.2.3",
+		"flow-bin": "^0.102.0",
+		"prettier": "^1.18.2"
+	},
+	"dependencies": {
+		"color": "^3.1.0",
+		"electron-pug": "^2.0.0",
+		"music-metadata": "^3.5.2",
+		"node-vibrant": "^3.2.0-alpha",
+		"uuid": "^3.3.2"
+	}
 }
