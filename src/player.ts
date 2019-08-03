@@ -1,5 +1,4 @@
 /* eslint-env node, browser */
-/* global Promise Proxy */
 
 let config = {
 	minContrast: 5.0,
@@ -81,10 +80,10 @@ function playpause(value?: boolean): void {
 	}
 }
 
-let currentlyPlaying
+let currentlyPlaying: string
 let music: MusicData[] = []
 
-function addMusic(musicPath, depth = 1) {
+function addMusic(musicPath: string, depth = 1): void {
 	if (depth > config.maxMusicSearchDepth) {
 		return
 	} //workaround for circular symlinks
@@ -106,7 +105,7 @@ function addMusic(musicPath, depth = 1) {
 	music.push(song)
 }
 
-let playlistFilter = song => {
+let playlistFilter = (song: MusicData) => {
 	let searchdata = song.filename
 	if (song.tags) {
 		searchdata += ` ${song.tags.title} ${song.tags.author} ${song.tags.album}`
@@ -124,7 +123,7 @@ let playlistFilter = song => {
 }
 
 let lastList = 0
-let llTimeout
+let llTimeout: NodeJS.Timeout
 
 function createLoadingSpinner() {
 	let el = document.createElement('span')
@@ -212,7 +211,7 @@ function listMusic() {
 }
 elSearch.addEventListener('input', listMusic)
 
-async function readTags(filename) {
+async function readTags(filename: string) {
 	let songTags = (await mm.parseFile(filename, {})).common
 	if (songTags.picture && songTags.picture[0]) {
 		songTags.art = `data:${
@@ -286,7 +285,7 @@ function playRandom() {
 	playSong(randomMusic)
 }
 
-async function playSong(song) {
+async function playSong(song: MusicData) {
 	history.push(song)
 	if (history.length > 1000) {
 		history.shift()
@@ -371,10 +370,13 @@ holder.ondragend = () => {
 holder.ondrop = e => {
 	e.preventDefault()
 
-	console.log('Adding', e.dataTransfer.files.length, 'files.')
-	for (let f of e.dataTransfer.files) {
-		addMusic(f.path)
+	if (!e.dataTransfer) {
+		console.log('No datatransfer')
+		alert('no datatransfer')
+		return
 	}
+	console.log('Adding', e.dataTransfer.files.length, 'files.')
+	Array.from(e.dataTransfer.files).forEach(f => addMusic(f.path))
 	loadMusic()
 
 	return false
