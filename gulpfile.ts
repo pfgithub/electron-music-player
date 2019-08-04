@@ -15,6 +15,12 @@ export async function typescript() {
 		.pipe(gulp.dest('dist'))
 }
 
+export function watch() {
+	gulp.watch('src/**/*.ts', typescript)
+	gulp.watch('src/**/*.html', html)
+	gulp.watch('src/**/*.png', png)
+}
+
 export async function html() {
 	return gulp.src('src/**/*.html').pipe(gulp.dest('dist'))
 }
