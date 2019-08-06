@@ -16,6 +16,8 @@ import Color from 'color'
 import * as mm from 'music-metadata'
 import * as Vibrant from 'node-vibrant'
 
+import * as main from './index'
+
 function $scss(data: TemplateStringsArray) {
 	const styleValue = data[0]
 	const styleElem = document.createElement('style')
@@ -176,28 +178,12 @@ button {
 }
 `
 
-function forceElementById<T extends HTMLElement>(
-	elid: string,
-	type: { new (): T },
-) {
-	const el = document.getElementById(elid)
-	if (!el) {
-		alert(`The element ${el} does not exist`)
-		throw new Error('!el')
-	}
-	if (!(el instanceof type)) {
-		alert(`The element ${el} #${elid} was not of the expected type ${type}`)
-		throw new Error('!el instanceof type')
-	}
-	return el
-}
-
-let elAudio = forceElementById('nowplaying_audio', HTMLAudioElement)
-let elSkip = forceElementById('skip', HTMLButtonElement)
-let elPrevious = forceElementById('previous', HTMLButtonElement)
-let elSonglist = forceElementById('songlist', HTMLUListElement)
-let elSearch = forceElementById('search', HTMLInputElement)
-let elPlaypause = forceElementById('playpause', HTMLButtonElement)
+let elAudio = main.nowPlayingAudio
+let elSkip = main.nowPlayingBtnSkipForwardElem
+let elPrevious = main.nowPlayingBtnPreviousElem
+let elSonglist = main.songListElem
+let elSearch = main.songListSearchField
+let elPlaypause = main.nowPlayingBtnPlaypauseElem
 
 if (
 	!elAudio ||
@@ -457,12 +443,11 @@ async function playSong(song: MusicData) {
 	elAudio.src = song.path
 	playpause(true)
 
-	let elArt = forceElementById('nowplaying_art', HTMLImageElement)
-	let elTitle = forceElementById('nowplaying_title', HTMLSpanElement)
-	let elArtist = forceElementById('nowplaying_artist', HTMLSpanElement)
-	let elLyrics = forceElementById('nowplaying_lyrics', HTMLParagraphElement)
-	let elFilename = forceElementById('nowplaying_filename', HTMLSpanElement)
-	let elNowPlaying = forceElementById('nowplaying', HTMLDivElement)
+	let elArt = main.nowPlayingArtElem
+	let elTitle = main.nowPlayingTitle
+	let elArtist = main.nowPlayingArtist
+	let elLyrics = main.nowPlayingLyrics
+	let elFilename = main.nowPlayingFilename
 
 	elFilename.innerText = song.filename
 
