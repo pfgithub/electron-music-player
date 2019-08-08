@@ -8,28 +8,46 @@ function $scss(data: TemplateStringsArray) {
 }
 
 $scss`
+@font-face {
+  font-family: 'buttons';
+  src: url('font/buttons.eot');
+  src: url('font/buttons.eot') format('embedded-opentype'),
+       url('font/buttons.woff2') format('woff2'),
+       url('font/buttons.woff') format('woff'),
+       url('font/buttons.ttf') format('truetype'),
+       url('font/buttons.svg') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+.fonticon {
+	font-family: "buttons";
+}
+.menubtn{
+	font-size: 1.2em;
+	color: var(--foreground);
+	width: 60px;
+	height: 60px;
+	padding: 0;
+	margin: 0;
+}
+.nowplaying {
+	background: linear-gradient(
+		to top,
+		var(--background2),
+		var(--background)
+	);
+	box-shadow: 0px 20px 20px 0px var(--background2);
+	position: sticky;
+	top: 0;
+	display: flex;
+	-webkit-app-region: drag;
+	& > * {
+		-webkit-app-region: no-drag;
+	}
+}
 `
 
 // reminder: https://stackoverflow.com/questions/494143/creating-a-new-dom-element-from-an-html-string-using-built-in-dom-methods-or-pro/35385518#35385518
-function svgButton(className: string, path: string) {
-	let svgElem = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-	svgElem.classList.add('menubtn')
-	svgElem.classList.add(className)
-	svgElem.setAttributeNS(null, 'version', '1.1')
-	svgElem.setAttributeNS(null, 'viewBox', '0 0 36 36')
-	svgElem.setAttributeNS(null, 'width', '100%')
-	svgElem.setAttributeNS(null, 'height', '100%')
-
-	let pathElem = document.createElementNS(
-		'http://www.w3.org/2000/svg',
-		'path',
-	)
-	pathElem.classList.add('menupath')
-	pathElem.setAttributeNS(null, 'd', path)
-	svgElem.appendChild(pathElem)
-
-	return svgElem
-}
 
 export let nowPlayingArtElem: HTMLImageElement
 export let nowPlayingBtnPreviousElem: HTMLButtonElement
@@ -45,29 +63,17 @@ export const nowPlayingElem = el.div(
 	{ class: 'nowplaying', id: 'nowplaying' },
 	nowPlayingArtElem = el.img({ src: '...', id: 'nowplaying_art' }),
 	nowPlayingBtnPreviousElem = el.button(
-		{ id: 'previous' },
-		svgButton(
-			'skipback',
-			'M 12,24 20.5,18 12,12 V 24 z M 22,12 v 12 h 2 V 12 h -2 z',
-		),
+		{ id: 'previous', class: 'menubtn' },
+		el.span({ class: 'fonticon skipback' }, '\ue801'),
 	),
 	nowPlayingBtnPlaypauseElem = el.button(
-		{ id: 'playpause' },
-		svgButton(
-			'btnplay',
-			'M 12,26 16,26 16,10 12,10 z M 21,26 25,26 25,10 21,10 z',
-		),
-		svgButton(
-			'btnpause',
-			'M 12,26 18.5,22 18.5,14 12,10 z M 18.5,22 25,18 25,18 18.5,14 z',
-		),
+		{ id: 'playpause', class: 'menubtn' },
+		el.span({ class: 'fonticon btnplay' }, '\ue800'),
+		el.span({ class: 'fonticon btnpause' }, '\ue803'),
 	),
 	nowPlayingBtnSkipForwardElem = el.button(
-		{ id: 'skip' },
-		svgButton(
-			'skipfwd',
-			'M 12,24 20.5,18 12,12 V 24 z M 22,12 v 12 h 2 V 12 h -2 z',
-		),
+		{ id: 'skip', class: 'menubtn' },
+		el.span({ class: 'fonticon skipfwd' }, '\ue802'),
 	),
 	nowPlayingVList = el.div(
 		{ class: 'verticallist' },

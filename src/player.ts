@@ -69,21 +69,6 @@ $scss`
 	width: 60px;
 	height: 60px;
 }
-.nowplaying {
-	background: linear-gradient(
-		to top,
-		var(--background2),
-		var(--background)
-	);
-	box-shadow: 0px 10px 20px 0px var(--background2);
-	position: sticky;
-	top: 0;
-	display: flex;
-	-webkit-app-region: drag;
-}
-.nowplaying > * {
-	-webkit-app-region: no-drag;
-}
 .icon {
 	width: 20px;
 	height: 20px;
@@ -138,10 +123,6 @@ li:hover > .icon {
 li > a {
 	color: inherit;
 	text-decoration: none;
-}
-.menubtn {
-	width: 40px;
-	height: 40px;
 }
 .menupath {
 	fill: var(--foreground);
@@ -380,7 +361,7 @@ async function readTags(filename: string) {
 
 		songTags.color = { dark, light }
 	} else {
-		songTags.art = `no_art.png`
+		songTags.art = `img/no_art.png`
 		songTags.color = { dark: Color('#f00'), light: Color('#fff') }
 	}
 	return songTags
