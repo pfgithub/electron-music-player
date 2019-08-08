@@ -42,7 +42,7 @@
 		"gulp-concat": "^2.6.1",
 		"gulp-sourcemaps": "^2.6.5",
 		"html-webpack-plugin": "^3.2.0",
-		"prettier": "^1.18.2",
+		"prettier": "pfgithub/prettier",
 		"progress-bar-webpack-plugin": "^1.12.1",
 		"ts-loader": "^6.0.4",
 		"typescript": "^3.5.3",

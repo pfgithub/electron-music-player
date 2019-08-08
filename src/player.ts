@@ -263,7 +263,7 @@ let playlistFilter = (song: MusicData) => {
 		.split(' ')
 		.every(i =>
 			searchdata.indexOf(i) > -1
-				? ((searchdata = searchdata.replace(i, '')), true)
+				? (searchdata = searchdata.replace(i, ''), true)
 				: false,
 		)
 }

@@ -25,15 +25,15 @@ export function tb(
 }
 
 export function resolveElement(elem: ElementResolveable): Node[] {
-	if(typeof elem === "string") {
-		return [document.createTextNode(elem)];
+	if (typeof elem === 'string') {
+		return [document.createTextNode(elem)]
 	}
-	if(Array.isArray(elem)) {
+	if (Array.isArray(elem)) {
 		return elem.flatMap(e => resolveElement(e))
 		// WARNING: 2019 feature that could be replicated easily with
 		// .reduce((t, e) => (t.push(...e), t), [])
 	}
-	return [elem];
+	return [elem]
 }
 
 export type ElementCreator<K extends keyof HTMLElementTagNameMap> = (
@@ -65,7 +65,9 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
 				attrValue instanceof TextBind ? 'textbindtodo' : attrValue,
 			)
 		})
-		children.forEach(child => resolveElement(child).forEach(resolved => el.appendChild(resolved)))
+		children.forEach(child =>
+			resolveElement(child).forEach(resolved => el.appendChild(resolved)),
+		)
 		return el
 	}
 }
@@ -80,4 +82,3 @@ export let el: {
 		return Reflect.get(target, key, reciever)
 	},
 })
-

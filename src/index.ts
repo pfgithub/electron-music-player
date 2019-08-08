@@ -43,15 +43,15 @@ export let nowPlayingAudio: HTMLAudioElement
 
 export const nowPlayingElem = el.div(
 	{ class: 'nowplaying', id: 'nowplaying' },
-	(nowPlayingArtElem = el.img({ src: '...', id: 'nowplaying_art' })),
-	(nowPlayingBtnPreviousElem = el.button(
+	nowPlayingArtElem = el.img({ src: '...', id: 'nowplaying_art' }),
+	nowPlayingBtnPreviousElem = el.button(
 		{ id: 'previous' },
 		svgButton(
 			'skipback',
 			'M 12,24 20.5,18 12,12 V 24 z M 22,12 v 12 h 2 V 12 h -2 z',
 		),
-	)),
-	(nowPlayingBtnPlaypauseElem = el.button(
+	),
+	nowPlayingBtnPlaypauseElem = el.button(
 		{ id: 'playpause' },
 		svgButton(
 			'btnplay',
@@ -61,27 +61,27 @@ export const nowPlayingElem = el.div(
 			'btnpause',
 			'M 12,26 18.5,22 18.5,14 12,10 z M 18.5,22 25,18 25,18 18.5,14 z',
 		),
-	)),
-	(nowPlayingBtnSkipForwardElem = el.button(
+	),
+	nowPlayingBtnSkipForwardElem = el.button(
 		{ id: 'skip' },
 		svgButton(
 			'skipfwd',
 			'M 12,24 20.5,18 12,12 V 24 z M 22,12 v 12 h 2 V 12 h -2 z',
 		),
-	)),
-	(nowPlayingVList = el.div(
+	),
+	nowPlayingVList = el.div(
 		{ class: 'verticallist' },
-		(nowPlayingTitle = el.div({ class: 'vlitem', id: 'nowplaying_title' })),
-		(nowPlayingArtist = el.div({
+		nowPlayingTitle = el.div({ class: 'vlitem', id: 'nowplaying_title' }),
+		nowPlayingArtist = el.div({
 			class: 'vlitem',
 			id: 'nowplaying_artist',
-		})),
-		(nowPlayingFilename = el.div({
+		}),
+		nowPlayingFilename = el.div({
 			class: 'vlitem',
 			id: 'nowplaying_filename',
-		})),
-	)),
-	(nowPlayingAudio = el.audio({ src: '...' })),
+		}),
+	),
+	nowPlayingAudio = el.audio({ src: '...' }),
 )
 
 document.body.appendChild(nowPlayingElem)
@@ -94,19 +94,19 @@ export let nowPlayingLyrics: HTMLParagraphElement
 
 export const columnView = el.div(
 	{ class: 'columns' },
-	(songListColumn = el.div(
+	songListColumn = el.div(
 		{ class: 'column' },
-		(songListSearchField = el.input({
+		songListSearchField = el.input({
 			id: 'search',
 			type: 'text',
 			placeholder: 'Search...',
-		})),
-		(songListElem = el.ul({ id: 'songlist' }, '...')),
-	)),
-	(songLyricsColumn = el.div(
+		}),
+		songListElem = el.ul({ id: 'songlist' }, '...'),
+	),
+	songLyricsColumn = el.div(
 		{ class: 'column' },
-		(nowPlayingLyrics = el.p({ id: 'nowplaying_lyrics' }, '...')),
-	)),
+		nowPlayingLyrics = el.p({ id: 'nowplaying_lyrics' }, '...'),
+	),
 )
 
 document.body.appendChild(columnView)
