@@ -11,7 +11,11 @@ export type ElementResolveable =
 	| null
 	| undefined
 	| false
+	| QElement
 export interface ElementResolveableArray extends Array<ElementResolveable> {} // avoid circular reference
+export class QElement {
+	node: ElementResolveable
+}
 
 export class TextBind {
 	constructor(_v: string) {}
@@ -70,6 +74,9 @@ export function resolveElement(elem: ElementResolveable): Node[] {
 	if (elem == null || elem === false) {
 		return []
 	}
+	if (elem instanceof QElement) {
+		return resolveElement(elem.node)
+	}
 	return [elem]
 }
 
@@ -92,7 +99,8 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
 			typeof params === 'string' ||
 			Array.isArray(params) ||
 			params == null ||
-			params === false
+			params === false ||
+			params instanceof QElement
 		) {
 			children.push(params)
 			params = {}
@@ -101,9 +109,9 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
 		if (params.$) {
 			;(<(keyof HTMLElementEventMap)[]>Object.keys(params.$)).forEach(
 				eventName => {
-					let attrValue = (<
-						ElementAttributes<HTMLElementTagNameMap[K]>
-					>params).$![eventName] // oh no what have we done
+					let attrValue = (<BindAttributes<HTMLElementTagNameMap[K]>>(
+						(<ElementAttributes<HTMLElementTagNameMap[K]>>params).$!
+					))[eventName] // oh no what have we done
 					el.addEventListener(eventName, <any>attrValue)
 				},
 			)
@@ -113,9 +121,10 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
 			;(<(keyof HTMLElementEventMap)[]>(
 				Object.keys(params.$capture)
 			)).forEach(eventName => {
-				let attrValue = (<ElementAttributes<HTMLElementTagNameMap[K]>>(
-					params
-				)).$capture![eventName] // oh no what have we done
+				let attrValue = (<BindAttributes<HTMLElementTagNameMap[K]>>(
+					(<ElementAttributes<HTMLElementTagNameMap[K]>>params)
+						.$capture!
+				))[eventName] // oh no what have we done
 				el.addEventListener(eventName, <any>attrValue, {
 					capture: true,
 				})

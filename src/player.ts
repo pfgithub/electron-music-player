@@ -1,4 +1,5 @@
 import { $scss, el } from './qdom'
+import {} from './App'
 
 let config = {
 	minContrast: 5.0,
@@ -15,8 +16,6 @@ import * as path from 'path'
 import Color from 'color'
 import * as mm from 'music-metadata'
 import * as Vibrant from 'node-vibrant'
-
-import * as main from './index'
 
 $scss`
 :root {
