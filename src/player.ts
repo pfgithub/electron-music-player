@@ -133,10 +133,10 @@ li > a {
 .btnpause {
 	display: none;
 }
-#playpause.play > .btnplay {
+#playpause:not(.play) > .btnplay {
 	display: block;
 }
-#playpause:not(.play) > .btnpause {
+#playpause.play > .btnpause {
 	display: block;
 }
 button {
@@ -244,7 +244,7 @@ let playlistFilter = (song: MusicData) => {
 		.split(' ')
 		.every(i =>
 			searchdata.indexOf(i) > -1
-				? (searchdata = searchdata.replace(i, ''), true)
+				? ((searchdata = searchdata.replace(i, '')), true)
 				: false,
 		)
 }
@@ -439,7 +439,69 @@ async function playSong(song: MusicData) {
 	elArt.src = songTags.art
 	elTitle.innerText = songTags.title
 	elArtist.innerText = songTags.artist
-	elLyrics.innerText = songTags.album
+	let lyricsHL = `${songTags.album}`.split('')
+	let lowercaseLyrics = lyricsHL.join('').toLowerCase()
+	let charsHL = ' '.repeat(lyricsHL.length).split('')
+
+	let searchTerm = elSearch.value.toLowerCase()
+	for (let word of searchTerm.split(' ')) {
+		if (!word) continue
+		while (true) {
+			let foundLoc = lowercaseLyrics.indexOf(word)
+			console.log(foundLoc)
+			if (foundLoc === -1) break
+			let length = word.length
+			for (let i = foundLoc; i < foundLoc + length; i++) {
+				charsHL[i] = 'b'
+			}
+			lowercaseLyrics = lowercaseLyrics.replace(
+				word,
+				' '.repeat(word.length),
+			)
+		}
+	}
+
+	let lyricContainer = document.createDocumentFragment()
+	let prevTag = ''
+	let text = ''
+	let commit = () => {}
+
+	charsHL.forEach((tag, i) => {
+		if (lyricsHL[i] === '\n') tag = 'newline'
+		if (tag !== prevTag) {
+			commit()
+			text = ''
+			prevTag = tag
+			if (tag === ' ') {
+				commit = () => {
+					let tag = document.createTextNode(text)
+					lyricContainer.appendChild(tag)
+				}
+			} else if (tag === 'b') {
+				commit = () => {
+					let bold = document.createElement('b')
+					let tag = document.createTextNode(text)
+					bold.appendChild(tag)
+					lyricContainer.appendChild(bold)
+				}
+			} else if (tag === 'newline') {
+				commit = () => {
+					let br = document.createElement('br')
+					lyricContainer.appendChild(br)
+				}
+			} else {
+				console.log('error')
+				commit = () => {}
+			}
+		}
+		text += lyricsHL[i]
+	})
+	commit()
+
+	console.log(lyricContainer)
+
+	elLyrics.innerHTML = ''
+	elLyrics.appendChild(lyricContainer)
 
 	// let vibrant = Vibrant.from(elArt); // not available in node
 	if (!songTags.color) {
