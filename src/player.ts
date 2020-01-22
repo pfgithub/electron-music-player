@@ -1,4 +1,5 @@
-/* eslint-env node, browser */
+import { $scss, el } from './qdom'
+import {} from './App'
 
 let config = {
 	minContrast: 5.0,
@@ -15,15 +16,6 @@ import * as path from 'path'
 import Color from 'color'
 import * as mm from 'music-metadata'
 import * as Vibrant from 'node-vibrant'
-
-import * as main from './index'
-
-function $scss(data: TemplateStringsArray) {
-	const styleValue = data[0]
-	const styleElem = document.createElement('style')
-	styleElem.appendChild(document.createTextNode(styleValue))
-	document.head.appendChild(styleElem)
-}
 
 $scss`
 :root {
@@ -133,10 +125,10 @@ li > a {
 .btnpause {
 	display: none;
 }
-#playpause:not(.play) > .btnplay {
+#playpause.play > .btnpause {
 	display: block;
 }
-#playpause.play > .btnpause {
+#playpause:not(.play) > .btnplay {
 	display: block;
 }
 button {
@@ -253,10 +245,7 @@ let lastList = 0
 let llTimeout: NodeJS.Timeout
 
 function createLoadingSpinner() {
-	let el = document.createElement('span')
-	// el.classList.add("loading");
-	el.innerText = '... '
-	return el
+	return el.span('...')
 }
 
 function listMusic() {
@@ -265,76 +254,71 @@ function listMusic() {
 		llTimeout = setTimeout(listMusic, config.updateSpeedLimit)
 		return
 	}
-	let newList = document.createElement('ul')
-	newList.setAttribute('id', 'songlist')
 	let loadCount = 0
-	music.forEach(song => {
-		if (!playlistFilter(song)) {
-			return
-		}
-		let li = document.createElement('li')
-		if (!song.tags) {
-			li.appendChild(createLoadingSpinner())
-			loadCount++
-		}
-		if (song.tags && song.tags.art) {
-			let icon = document.createElement('img')
-			icon.src = song.tags.art
-			icon.classList.add('icon')
-			li.appendChild(icon)
-		}
-		let title = document.createElement('span')
-		li.addEventListener('click', (e /*: MouseEvent*/) => {
-			e.preventDefault()
-			playSong(song)
-		})
-		li.setAttribute('role', 'button')
-		li.setAttribute('aria-pressed', 'false')
-		li.setAttribute('tabindex', '0')
-		if (song.tags && song.tags.title && song.tags.artist) {
-			title.innerText = `${song.tags.title} by ${song.tags.artist}`
-		} else {
-			title.innerText = `${song.filename}`
-		}
-		li.appendChild(title)
-		if (currentlyPlaying === song.path) {
-			li.classList.add('playing')
-			li.setAttribute('aria-pressed', 'true')
-		}
-		if (song.tags && song.tags.color) {
-			if (config.lightMode) {
-				li.style.setProperty(
-					'--track-foreground',
-					song.tags.color.dark.hex(),
-				)
-				li.style.setProperty(
-					'--track-background',
-					song.tags.color.light.hex(),
-				)
-			} else {
-				li.style.setProperty(
-					'--track-foreground',
-					song.tags.color.light.hex(),
-				)
-				li.style.setProperty(
-					'--track-background',
-					song.tags.color.dark.hex(),
-				)
+	let newList = el.ul(
+		{ id: 'songlist' },
+		music.map(song => {
+			if (!playlistFilter(song)) {
+				return
 			}
-		}
-		newList.appendChild(li)
-	})
+			let playing = currentlyPlaying === song.path
+			let li = el.li(
+				{
+					role: 'button',
+					'aria-pressed': playing ? 'true' : 'false',
+					tabindex: '0',
+					class: playing ? 'playing' : '',
+					$: {
+						click: e => {
+							e.preventDefault, playSong(song)
+						},
+					},
+				},
+				!song.tags && (loadCount++, createLoadingSpinner()),
+				song.tags &&
+					song.tags.art &&
+					el.img({ src: song.tags.art, class: 'icon' }),
+				el.span(
+					{},
+					song.tags && song.tags.title && song.tags.artist
+						? `${song.tags.title} by ${song.tags.artist}`
+						: `${song.filename}`,
+				),
+			)
+			if (song.tags && song.tags.color) {
+				if (config.lightMode) {
+					li.style.setProperty(
+						'--track-foreground',
+						song.tags.color.dark.hex(),
+					)
+					li.style.setProperty(
+						'--track-background',
+						song.tags.color.light.hex(),
+					)
+				} else {
+					li.style.setProperty(
+						'--track-foreground',
+						song.tags.color.light.hex(),
+					)
+					li.style.setProperty(
+						'--track-background',
+						song.tags.color.dark.hex(),
+					)
+				}
+			}
+			return li
+		}),
+		loadCount > 0 &&
+			el.li(
+				{},
+				createLoadingSpinner(),
+				`Loading ${loadCount} more songs...`,
+			),
+	)
 	elSonglist.parentNode &&
 		elSonglist.parentNode.replaceChild(newList, elSonglist)
 	elSonglist = newList
 	lastList = new Date().getTime()
-
-	if (loadCount > 0) {
-		let li = document.createElement('li')
-		li.appendChild(createLoadingSpinner())
-		li.innerText = `Loading ${loadCount} more songs...`
-		newList.appendChild(li)
-	}
 }
 elSearch.addEventListener('input', listMusic)
 
