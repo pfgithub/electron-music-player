@@ -149,6 +149,37 @@ button {
 .skipback {
 	transform: rotate(180deg);
 }
+
+// more
+
+#nowplaying_art {
+	position: fixed;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0;
+	width: 100%;
+	height: 100%;
+	filter: blur(20px);
+	z-index: -9999;
+}
+
+.columns {
+	background-color: rgba(0,0,0,0.5);
+	min-width: calc(100vw - 40px);
+	position: absolute;
+	z-index: 10;
+}
+
+body {
+	overflow-x: hidden;
+}
+
+input {
+	background-color: transparent;
+}
+
+
 `
 
 let elAudio = main.nowPlayingAudio
