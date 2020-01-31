@@ -9,7 +9,7 @@
 
 A simple music player in electron
 
-![screenshot](.github/demo-2019-06-30_21-51.png)
+![screenshot](https://i.imgur.com/ptGmrTa.png)
 
 Colors are set dynamically based on the 0th art of the song that is playing,
 enforcing a contrast ratio of at least 3:1
