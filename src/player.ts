@@ -160,8 +160,9 @@ button {
 	right: 0;
 	width: 100%;
 	height: 100%;
-	filter: blur(20px);
+	filter: blur(40px);
 	z-index: -9999;
+	transform: scale(1.5);
 }
 
 .columns {
