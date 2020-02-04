@@ -12,7 +12,7 @@ import * as path from "path";
 import * as fs_ from "fs";
 const fs = fs_.promises;
 
-let config = {
+const config = {
     maxMusicSearchDepth: 10,
 };
 
@@ -151,7 +151,7 @@ class App extends QElement {
         if (depth > config.maxMusicSearchDepth) {
             return;
         } //workaround for circular symlinks
-        let lstat = await fs.stat(musicPath);
+        const lstat = await fs.stat(musicPath);
         console.log(lstat.isDirectory());
         if (lstat.isSymbolicLink()) {
             // increase depth only on symbolic link (maybe)
