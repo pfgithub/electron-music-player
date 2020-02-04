@@ -1,7 +1,5 @@
 export class SongListItem {
-	constructor() {
-		
-	}
+    constructor() {}
 }
 
 /*

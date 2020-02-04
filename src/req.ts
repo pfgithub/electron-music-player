@@ -1,1 +1,1 @@
-import {} from "./App"
+import {} from "./App";
