@@ -4,6 +4,8 @@
     "description": "A minimal Electron application",
     "main": "dist/main.js",
     "scripts": {
+        "build": "gulp",
+        "build-watch": "gulp watch",
         "start": "electron ."
     },
     "repository": "https://github.com/electron/electron-quick-start",
