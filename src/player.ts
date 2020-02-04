@@ -160,13 +160,12 @@ button {
 	right: 0;
 	width: 100%;
 	height: 100%;
-	filter: blur(40px);
+	filter: blur(40px) brightness(0.5);
 	z-index: -9999;
 	transform: scale(1.5);
 }
 
 .columns {
-	background-color: rgba(0,0,0,0.5);
 	min-width: calc(100vw - 40px);
 	position: absolute;
 	z-index: 10;
