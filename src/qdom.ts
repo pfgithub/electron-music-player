@@ -12,7 +12,7 @@ export type ElementResolveable =
     | undefined
     | false
     | QElement;
-export interface ElementResolveableArray extends Array<ElementResolveable> {} // avoid circular reference
+export type ElementResolveableArray = Array<ElementResolveable>; // avoid circular reference
 export class QElement {
     node: ElementResolveable;
 }
@@ -105,13 +105,15 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
             children.push(params);
             params = {};
         }
-        let el = document.createElement(key);
+        const el = document.createElement(key);
         if (params.$) {
             (<(keyof HTMLElementEventMap)[]>Object.keys(params.$)).forEach(
                 eventName => {
-                    let attrValue = (<BindAttributes<HTMLElementTagNameMap[K]>>(
-                        (<ElementAttributes<HTMLElementTagNameMap[K]>>params).$!
-                    ))[eventName]; // oh no what have we done
+                    const attrValue = (<
+                        BindAttributes<HTMLElementTagNameMap[K]>
+                    >(<ElementAttributes<HTMLElementTagNameMap[K]>>params).$!)[
+                        eventName
+                    ]; // oh no what have we done
                     el.addEventListener(eventName, <any>attrValue);
                 },
             );
@@ -121,7 +123,7 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
             (<(keyof HTMLElementEventMap)[]>(
                 Object.keys(params.$capture)
             )).forEach(eventName => {
-                let attrValue = (<BindAttributes<HTMLElementTagNameMap[K]>>(
+                const attrValue = (<BindAttributes<HTMLElementTagNameMap[K]>>(
                     (<ElementAttributes<HTMLElementTagNameMap[K]>>params)
                         .$capture!
                 ))[eventName]; // oh no what have we done
@@ -132,7 +134,7 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
             delete params.$capture;
         }
         Object.keys(params).forEach(attrName => {
-            let attrValue = (<ElementAttributes<HTMLElementTagNameMap[K]>>(
+            const attrValue = (<ElementAttributes<HTMLElementTagNameMap[K]>>(
                 params
             ))[attrName];
             if (attrValue == null) {
@@ -151,7 +153,7 @@ export function elementCreator<K extends keyof HTMLElementTagNameMap>(
     };
 }
 
-export let el: {
+export const el: {
     [key in keyof HTMLElementTagNameMap]: ElementCreator<key>;
 } = new Proxy(<any>{}, {
     get: (target, key: keyof HTMLElementTagNameMap, reciever) => {

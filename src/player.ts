@@ -1,7 +1,7 @@
 import { $scss, el } from "./qdom";
 import {} from "./App";
 
-let config = {
+const config = {
     minContrast: 5.0,
     constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
     lightMode: false,
@@ -182,12 +182,12 @@ input {
 
 `;
 
-let elAudio = main.nowPlayingAudio;
-let elSkip = main.nowPlayingBtnSkipForwardElem;
-let elPrevious = main.nowPlayingBtnPreviousElem;
+const elAudio = main.nowPlayingAudio;
+const elSkip = main.nowPlayingBtnSkipForwardElem;
+const elPrevious = main.nowPlayingBtnPreviousElem;
 let elSonglist = main.songListElem;
-let elSearch = main.songListSearchField;
-let elPlaypause = main.nowPlayingBtnPlaypauseElem;
+const elSearch = main.songListSearchField;
+const elPlaypause = main.nowPlayingBtnPlaypauseElem;
 
 if (
     !elAudio ||
@@ -208,9 +208,9 @@ if (!(elAudio instanceof HTMLAudioElement)) {
     );
 }
 
-type MusicData = { filename: string; path: string; uuid: Symbol; tags: any };
+type MusicData = { filename: string; path: string; uuid: symbol; tags: any };
 
-let history: MusicData[] = [];
+const history: MusicData[] = [];
 
 elPlaypause.addEventListener("click", (e /*: MouseEvent*/) => {
     e.preventDefault();
@@ -231,13 +231,13 @@ function playpause(value?: boolean): void {
 }
 
 let currentlyPlaying: string;
-let music: MusicData[] = [];
+const music: MusicData[] = [];
 
 function addMusic(musicPath: string, depth = 1): void {
     if (depth > config.maxMusicSearchDepth) {
         return;
     } //workaround for circular symlinks
-    let lstat = fs.statSync(musicPath);
+    const lstat = fs.statSync(musicPath);
     console.log(lstat.isDirectory());
     if (lstat.isDirectory()) {
         return fs
@@ -246,7 +246,7 @@ function addMusic(musicPath: string, depth = 1): void {
                 addMusic(path.join(musicPath, subPath), depth + 1),
             );
     }
-    let song = {
+    const song = {
         filename: path.basename(musicPath),
         path: musicPath,
         uuid: Symbol(musicPath),
@@ -255,18 +255,18 @@ function addMusic(musicPath: string, depth = 1): void {
     music.push(song);
 }
 
-let playlistFilter = (song: MusicData) => {
+const playlistFilter = (song: MusicData) => {
     let searchdata = song.filename;
     if (song.tags) {
         searchdata += ` ${song.tags.title} ${song.tags.author} ${song.tags.album}`;
     }
     searchdata = searchdata.toLowerCase();
 
-    let searchTerm = elSearch.value.toLowerCase();
+    const searchTerm = elSearch.value.toLowerCase();
     return searchTerm
         .split(" ")
         .every(i =>
-            searchdata.indexOf(i) > -1
+            searchdata.includes(i)
                 ? ((searchdata = searchdata.replace(i, "")), true)
                 : false,
         );
@@ -286,14 +286,14 @@ function listMusic() {
         return;
     }
     let loadCount = 0;
-    let newList = el.ul(
+    const newList = el.ul(
         { id: "songlist" },
         music.map(song => {
             if (!playlistFilter(song)) {
                 return;
             }
-            let playing = currentlyPlaying === song.path;
-            let li = el.li(
+            const playing = currentlyPlaying === song.path;
+            const li = el.li(
                 {
                     role: "button",
                     "aria-pressed": playing ? "true" : "false",
@@ -354,7 +354,7 @@ function listMusic() {
 elSearch.addEventListener("input", listMusic);
 
 async function readTags(filename: string) {
-    let songTags = (await mm.parseFile(filename, {})).common;
+    const songTags = (await mm.parseFile(filename, {})).common;
     if (songTags.picture && songTags.picture[0]) {
         songTags.art = `data:${
             songTags.picture[0].format
@@ -383,7 +383,7 @@ async function readTags(filename: string) {
 }
 
 async function loadMusic() {
-    for (let song of music) {
+    for (const song of music) {
         if (song.tags) {
             continue;
         }
@@ -411,7 +411,7 @@ elSkip.addEventListener("click", (e /*: MouseEvent*/) => {
 elPrevious.addEventListener("click", (e /*: MouseEvent*/) => {
     e.preventDefault();
     history.pop();
-    let song = history.pop();
+    const song = history.pop();
     if (song) {
         playSong(song);
     } else {
@@ -420,7 +420,7 @@ elPrevious.addEventListener("click", (e /*: MouseEvent*/) => {
 });
 
 function playRandom() {
-    let randomMusic = music[Math.floor(Math.random() * music.length)];
+    const randomMusic = music[Math.floor(Math.random() * music.length)];
     if (!randomMusic) {
         return;
     }
@@ -439,33 +439,33 @@ async function playSong(song: MusicData) {
     elAudio.src = song.path;
     playpause(true);
 
-    let elArt = main.nowPlayingArtElem;
-    let elTitle = main.nowPlayingTitle;
-    let elArtist = main.nowPlayingArtist;
-    let elLyrics = main.nowPlayingLyrics;
-    let elFilename = main.nowPlayingFilename;
+    const elArt = main.nowPlayingArtElem;
+    const elTitle = main.nowPlayingTitle;
+    const elArtist = main.nowPlayingArtist;
+    const elLyrics = main.nowPlayingLyrics;
+    const elFilename = main.nowPlayingFilename;
 
     elFilename.innerText = song.filename;
 
-    let songTags = song.tags || (await readTags(song.path));
+    const songTags = song.tags || (await readTags(song.path));
 
     console.log(songTags);
 
     elArt.src = songTags.art;
     elTitle.innerText = songTags.title;
     elArtist.innerText = songTags.artist;
-    let lyricsHL = `${songTags.album}`.split("");
+    const lyricsHL = `${songTags.album}`.split("");
     let lowercaseLyrics = lyricsHL.join("").toLowerCase();
-    let charsHL = " ".repeat(lyricsHL.length).split("");
+    const charsHL = " ".repeat(lyricsHL.length).split("");
 
-    let searchTerm = elSearch.value.toLowerCase();
-    for (let word of searchTerm.split(" ")) {
+    const searchTerm = elSearch.value.toLowerCase();
+    for (const word of searchTerm.split(" ")) {
         if (!word) continue;
         while (true) {
-            let foundLoc = lowercaseLyrics.indexOf(word);
+            const foundLoc = lowercaseLyrics.indexOf(word);
             console.log(foundLoc);
             if (foundLoc === -1) break;
-            let length = word.length;
+            const length = word.length;
             for (let i = foundLoc; i < foundLoc + length; i++) {
                 charsHL[i] = "b";
             }
@@ -476,7 +476,7 @@ async function playSong(song: MusicData) {
         }
     }
 
-    let lyricContainer = document.createDocumentFragment();
+    const lyricContainer = document.createDocumentFragment();
     let prevTag = "";
     let text = "";
     let commit = () => {};
@@ -489,19 +489,19 @@ async function playSong(song: MusicData) {
             prevTag = tag;
             if (tag === " ") {
                 commit = () => {
-                    let tag = document.createTextNode(text);
+                    const tag = document.createTextNode(text);
                     lyricContainer.appendChild(tag);
                 };
             } else if (tag === "b") {
                 commit = () => {
-                    let bold = document.createElement("b");
-                    let tag = document.createTextNode(text);
+                    const bold = document.createElement("b");
+                    const tag = document.createTextNode(text);
                     bold.appendChild(tag);
                     lyricContainer.appendChild(bold);
                 };
             } else if (tag === "newline") {
                 commit = () => {
-                    let br = document.createElement("br");
+                    const br = document.createElement("br");
                     lyricContainer.appendChild(br);
                 };
             } else {
@@ -546,7 +546,7 @@ async function playSong(song: MusicData) {
     }
 }
 
-let holder = document;
+const holder = document;
 
 holder.ondragover = () => {
     return false;
