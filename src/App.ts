@@ -61,6 +61,7 @@ class App extends QElement {
     node: ElementResolveable;
     nowPlayingElem: HTMLDivElement;
     nowPlayingArtElem: HTMLImageElement;
+    nowPlayingArtHackElem: HTMLImageElement;
     nowPlayingBtnPreviousElem: HTMLButtonElement;
     nowPlayingBtnPlaypauseElem: HTMLButtonElement;
     nowPlayingBtnSkipForwardElem: HTMLButtonElement;
@@ -87,6 +88,10 @@ class App extends QElement {
                 (this.nowPlayingArtElem = el.img({
                     src: "...",
                     id: "nowplaying_art",
+                })),
+                (this.nowPlayingArtHackElem = el.img({
+                    src: "...",
+                    id: "nowplaying_art_hack",
                 })),
                 (this.nowPlayingBtnPreviousElem = el.button(
                     { id: "previous", class: "menubtn" },

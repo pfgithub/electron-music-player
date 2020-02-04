@@ -152,7 +152,7 @@ button {
 
 // more
 
-#nowplaying_art {
+#nowplaying_art_hack {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -440,6 +440,7 @@ async function playSong(song: MusicData) {
     playpause(true);
 
     const elArt = main.nowPlayingArtElem;
+    const elArtHack = main.nowPlayingArtHackElem;
     const elTitle = main.nowPlayingTitle;
     const elArtist = main.nowPlayingArtist;
     const elLyrics = main.nowPlayingLyrics;
@@ -452,6 +453,7 @@ async function playSong(song: MusicData) {
     console.log(songTags);
 
     elArt.src = songTags.art;
+    elArtHack.src = songTags.art;
     elTitle.innerText = songTags.title;
     elArtist.innerText = songTags.artist;
     const lyricsHL = `${songTags.album}`.split("");
