@@ -109,7 +109,6 @@ li.playing {
 li:hover {
 	background-color: var(--track-foreground);
 	color: var(--track-background);
-	cursor: pointer;
 }
 .icon {
 	visibility: hidden;
@@ -184,6 +183,26 @@ input {
 	background-color: transparent;
 }
 
+li {
+    position: relative;
+}
+.itembuttons {
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    grid-auto-flow: column;
+}
+li:hover .itembuttons {
+    display: grid;
+}
+.itembuttons button {
+    cursor: pointer;
+}
+.itembuttons button:hover {
+    background-color: black;
+    color: white;
+}
 
 `;
 
@@ -324,6 +343,21 @@ function listMusic() {
                         ? `${song.tags.title} by ${song.tags.artist}`
                         : `${song.filename}`,
                 ),
+                el.div(
+                    { class: "itembuttons" },
+                    el.button(
+                        {
+                            title: "queue",
+                            $: {
+                                click: (e: MouseEvent) => {
+                                    e.stopPropagation();
+                                    queueFinal(song);
+                                },
+                            },
+                        },
+                        "+",
+                    ),
+                ),
             );
             if (song.tags && song.tags.color) {
                 if (config.lightMode) {
@@ -432,6 +466,10 @@ function queueImmediate(song: MusicData) {
     queueIndex = queue.length;
     queue.push(song);
     updatePlay();
+}
+
+function queueFinal(song: MusicData) {
+    queue.push(song);
 }
 
 function fillRandom() {
