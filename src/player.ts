@@ -1,11 +1,13 @@
 import { $scss, el } from "./qdom";
-import {} from "./App";
+import { App, hack } from "./App";
+
+hack();
 
 const config = {
     minContrast: 5.0,
     constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
     lightMode: false,
-    updateSpeedLimit: 100, // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups.
+    updateSpeedLimit: 1000, // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups.
     maxMusicSearchDepth: 10, // Max search depth of folders in music added
 };
 
@@ -13,8 +15,11 @@ import * as fs from "fs"; // .promises
 import * as os from "os";
 import * as url from "url";
 import * as path from "path";
+//@ts-ignore
 import Color from "color";
+//@ts-ignore
 import * as mm from "music-metadata";
+//@ts-ignore
 import * as Vibrant from "node-vibrant";
 
 $scss`
@@ -182,6 +187,8 @@ input {
 
 `;
 
+declare let main: App;
+
 const elAudio = main.nowPlayingAudio;
 const elSkip = main.nowPlayingBtnSkipForwardElem;
 const elPrevious = main.nowPlayingBtnPreviousElem;
@@ -210,10 +217,11 @@ if (!(elAudio instanceof HTMLAudioElement)) {
 
 type MusicData = { filename: string; path: string; uuid: symbol; tags: any };
 
-const history: MusicData[] = [];
+const queue: (MusicData | undefined)[] = [];
+let queueIndex = 0;
 
 elPlaypause.addEventListener("click", (e /*: MouseEvent*/) => {
-    e.preventDefault();
+    e.stopPropagation();
     playpause();
 });
 
@@ -300,8 +308,9 @@ function listMusic() {
                     tabindex: "0",
                     class: playing ? "playing" : "",
                     $: {
-                        click: e => {
-                            e.preventDefault, playSong(song);
+                        click: (e: MouseEvent) => {
+                            e.stopPropagation();
+                            queueImmediate(song);
                         },
                     },
                 },
@@ -397,41 +406,61 @@ async function loadMusic() {
 
 addMusic(path.join(os.homedir(), "Music"));
 loadMusic();
-playRandom();
+playNext();
 
 elAudio.addEventListener("ended", () => {
-    playRandom();
+    playNext();
 });
 
 elSkip.addEventListener("click", (e /*: MouseEvent*/) => {
-    e.preventDefault();
-    playRandom();
+    e.stopPropagation();
+    playNext();
 });
 
 elPrevious.addEventListener("click", (e /*: MouseEvent*/) => {
-    e.preventDefault();
-    history.pop();
-    const song = history.pop();
-    if (song) {
-        playSong(song);
-    } else {
-        playRandom();
-    }
+    e.stopPropagation();
+    queueIndex--;
+    updatePlay();
 });
 
-function playRandom() {
-    const randomMusic = music[Math.floor(Math.random() * music.length)];
-    if (!randomMusic) {
-        return;
-    }
-    playSong(randomMusic);
+function playNext() {
+    queueIndex++;
+    updatePlay();
 }
 
-async function playSong(song: MusicData) {
-    history.push(song);
-    if (history.length > 1000) {
-        history.shift();
+function queueImmediate(song: MusicData) {
+    queueIndex = queue.length;
+    queue.push(song);
+    updatePlay();
+}
+
+function fillRandom() {
+    const randomMusic = music[Math.floor(Math.random() * music.length)];
+    queue[queueIndex] = randomMusic;
+}
+
+async function updatePlay() {
+    if (queue.length > 1000 && queueIndex > 1) {
+        queue.shift();
+        queueIndex--;
     }
+
+    while (queueIndex < 0) {
+        queue.unshift(undefined);
+        queueIndex++;
+    }
+
+    let song = queue[queueIndex];
+    if (!song) {
+        fillRandom();
+        song = queue[queueIndex];
+        if (!song) {
+            alert("no music :(");
+            return;
+        }
+    }
+
+    const songTags = song.tags || (await readTags(song.path));
 
     currentlyPlaying = song.path;
     listMusic();
@@ -447,8 +476,6 @@ async function playSong(song: MusicData) {
     const elFilename = main.nowPlayingFilename;
 
     elFilename.innerText = song.filename;
-
-    const songTags = song.tags || (await readTags(song.path));
 
     console.log(songTags);
 

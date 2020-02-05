@@ -57,7 +57,7 @@ $scss`
 `;
 
 // reminder: https://stackoverflow.com/questions/494143/creating-a-new-dom-element-from-an-html-string-using-built-in-dom-methods-or-pro/35385518#35385518
-class App extends QElement {
+export class App extends QElement {
     node: ElementResolveable;
     nowPlayingElem: HTMLDivElement;
     nowPlayingArtElem: HTMLImageElement;
@@ -252,3 +252,17 @@ class Song extends QElement {
 }
 
 resolveElement(new App()).map(c => document.body.appendChild(c));
+
+export function hack() {
+    return `
+$> /var/bin/sudo hack https://www.google.com/
+==== hacking google.com ====
+nFDJkfsdo879y8JAPIMOS08uufndijosf987ybakjno
+jknfd9y8hsf*Uh0nhuf78ynioujfd8husanjfioacdi
+nfjYU80fdsanoj978*(&Hnhodfsainou78fd87asoin
+
+exploting /etc/hosts [==============] done!
+hacking dictionary [================] done!
+coding vb.net [==============-------] 3 sec
+`;
+}
