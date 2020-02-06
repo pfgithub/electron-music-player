@@ -311,14 +311,29 @@ function addMusic(musicPath: string, depth = 1): void {
     music.push(song);
 }
 
+const savedregex = { regex: new RegExp(""), text: "" };
+
 const playlistFilter = (song: MusicData) => {
     let searchdata = song.filename;
     if (song.tags) {
         searchdata += ` ${song.tags.title} ${song.tags.author} ${song.tags.album}`;
     }
+
+    const searchValue = elSearch.value;
+    if (searchValue.startsWith("!")) {
+        return searchdata.includes(searchValue.substr(1));
+    }
+    if (searchValue.startsWith("/")) {
+        if (savedregex.text !== searchValue) {
+            savedregex.text = searchValue;
+            savedregex.regex = new RegExp(searchValue.substr(1));
+        }
+        return savedregex.regex.exec(searchValue) != null;
+    }
+
     searchdata = searchdata.toLowerCase();
 
-    const searchTerm = elSearch.value.toLowerCase();
+    const searchTerm = searchValue.toLowerCase();
     return searchTerm
         .split(" ")
         .every(i =>
