@@ -200,11 +200,40 @@ li:hover .itembuttons {
     cursor: pointer;
 }
 .itembuttons button:hover {
-    background-color: black;
-    color: white;
+    background-color: var(--track-background);
+    color: var(--track-foreground);
 }
-
+@keyframes particle {
+    from {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+    to {
+        transform: translate(-50%, -150%);
+        opacity: 0;
+    }
+}
+.particle {
+    z-index: 1000;
+    position: fixed;
+    pointer-events: none;
+    top: var(--y);
+    left: var(--x);
+    color: var(--foreground);
+    font-size: 16pt;
+    animation: particle 1s;
+    animation-fill-mode: both;
+}
 `;
+
+function spawnParticle(x: number, y: number, text: string) {
+    const particle = el.div({ class: "particle" });
+    particle.appendChild(document.createTextNode(text));
+    particle.style.setProperty("--x", x + "px");
+    particle.style.setProperty("--y", y + "px");
+    document.body.appendChild(particle);
+    setTimeout(() => particle.remove(), 1000);
+}
 
 declare let main: App;
 
@@ -352,6 +381,7 @@ function listMusic() {
                                 click: (e: MouseEvent) => {
                                     e.stopPropagation();
                                     queueFinal(song);
+                                    spawnParticle(e.clientX, e.clientY, "+");
                                 },
                             },
                         },
