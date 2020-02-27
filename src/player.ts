@@ -566,69 +566,117 @@ async function updatePlay() {
     elArtHack.src = songTags.art;
     elTitle.innerText = songTags.title;
     elArtist.innerText = songTags.artist;
-    const lyricsHL = `${songTags.album}`.split("");
-    let lowercaseLyrics = lyricsHL.join("").toLowerCase();
-    const charsHL = " ".repeat(lyricsHL.length).split("");
 
-    const searchTerm = elSearch.value.toLowerCase();
-    for (const word of searchTerm.split(" ")) {
-        if (!word) continue;
-        while (true) {
-            const foundLoc = lowercaseLyrics.indexOf(word);
-            console.log(foundLoc);
-            if (foundLoc === -1) break;
-            const length = word.length;
-            for (let i = foundLoc; i < foundLoc + length; i++) {
-                charsHL[i] = "b";
+    function renderLyrics() {
+        const lyricsHL = `${songTags.album}`.split("");
+        let lowercaseLyrics = lyricsHL.join("").toLowerCase();
+        const charsHL = " ".repeat(lyricsHL.length).split("");
+
+        const searchTerm = elSearch.value.toLowerCase();
+        for (const word of searchTerm.split(" ")) {
+            if (!word) continue;
+            while (true) {
+                const foundLoc = lowercaseLyrics.indexOf(word);
+                console.log(foundLoc);
+                if (foundLoc === -1) break;
+                const length = word.length;
+                for (let i = foundLoc; i < foundLoc + length; i++) {
+                    charsHL[i] = "b";
+                }
+                lowercaseLyrics = lowercaseLyrics.replace(
+                    word,
+                    " ".repeat(word.length),
+                );
             }
-            lowercaseLyrics = lowercaseLyrics.replace(
-                word,
-                " ".repeat(word.length),
-            );
         }
+
+        const lyricContainer = document.createDocumentFragment();
+        let prevTag = "";
+        let text = "";
+        let commit = () => {};
+
+        charsHL.forEach((tag, i) => {
+            if (lyricsHL[i] === "\n") tag = "newline";
+            if (tag !== prevTag) {
+                commit();
+                text = "";
+                prevTag = tag;
+                if (tag === " ") {
+                    commit = () => {
+                        const tag = document.createTextNode(text);
+                        lyricContainer.appendChild(tag);
+                    };
+                } else if (tag === "b") {
+                    commit = () => {
+                        const bold = document.createElement("b");
+                        const tag = document.createTextNode(text);
+                        bold.appendChild(tag);
+                        lyricContainer.appendChild(bold);
+                    };
+                } else if (tag === "newline") {
+                    commit = () => {
+                        const br = document.createElement("br");
+                        lyricContainer.appendChild(br);
+                    };
+                } else {
+                    console.log("error");
+                    commit = () => {};
+                }
+            }
+            text += lyricsHL[i];
+        });
+        commit();
+
+        const editButton = document.createElement("button");
+        editButton.appendChild(document.createTextNode("Edit"));
+        lyricContainer.appendChild(document.createElement("br"));
+        lyricContainer.appendChild(editButton);
+
+        editButton.addEventListener("click", () => renderLyricsEditor());
+
+        console.log(lyricContainer);
+
+        elLyrics.innerHTML = "";
+        elLyrics.appendChild(lyricContainer);
     }
 
-    const lyricContainer = document.createDocumentFragment();
-    let prevTag = "";
-    let text = "";
-    let commit = () => {};
+    function renderLoader() {
+        elLyrics.innerHTML = "loading...";
+    }
 
-    charsHL.forEach((tag, i) => {
-        if (lyricsHL[i] === "\n") tag = "newline";
-        if (tag !== prevTag) {
-            commit();
-            text = "";
-            prevTag = tag;
-            if (tag === " ") {
-                commit = () => {
-                    const tag = document.createTextNode(text);
-                    lyricContainer.appendChild(tag);
-                };
-            } else if (tag === "b") {
-                commit = () => {
-                    const bold = document.createElement("b");
-                    const tag = document.createTextNode(text);
-                    bold.appendChild(tag);
-                    lyricContainer.appendChild(bold);
-                };
-            } else if (tag === "newline") {
-                commit = () => {
-                    const br = document.createElement("br");
-                    lyricContainer.appendChild(br);
-                };
-            } else {
-                console.log("error");
-                commit = () => {};
-            }
-        }
-        text += lyricsHL[i];
-    });
-    commit();
+    function renderLyricsEditor() {
+        const btnSave = document.createElement("button");
+        btnSave.appendChild(document.createTextNode("save"));
+        const btnCancel = document.createElement("button");
+        btnSave.appendChild(document.createTextNode("cancel"));
 
-    console.log(lyricContainer);
+        const textarea = document.createElement("textarea");
+        textarea.value = songTags.album;
 
-    elLyrics.innerHTML = "";
-    elLyrics.appendChild(lyricContainer);
+        btnCancel.onclick = () => renderLyrics();
+        // btnSave.onclick = async () => {
+        //     const newValue = textarea.value;
+        //     songTags.album = newValue;
+        //     let image = await renderImageSelector();
+        //     renderLoader();
+        //     await pify(_ =>
+        //         ffmetadata.write(
+        //             filename,
+        //             { album: newValue },
+        //             { attachments: ["/tmp/icon.png"] },
+        //             _,
+        //         ),
+        //     );
+        //     renderLyrics();
+        // };
+
+        elLyrics.innerHTML = "";
+        elLyrics.appendChild(btnSave);
+        elLyrics.appendChild(btnCancel);
+        elLyrics.appendChild(textarea);
+    }
+
+    renderLyrics();
 
     // let vibrant = Vibrant.from(elArt); // not available in node
     if (!songTags.color) {
