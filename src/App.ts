@@ -40,12 +40,8 @@ $scss`
 	margin: 0;
 }
 .nowplaying {
-	background: linear-gradient(
-		to top,
-		var(--background2),
-		var(--background)
-	);
-	box-shadow: 0px 20px 20px 0px var(--background2);
+    background: var(--background);
+    border-radius: 0 0 10px 10px;
 	position: sticky;
 	top: 0;
 	display: flex;
@@ -82,16 +78,16 @@ export class App extends QElement {
 
     constructor() {
         super();
+        this.nowPlayingArtHackElem = document.createElement("img");
+        this.nowPlayingArtHackElem.setAttribute("id", "nowplaying_art_hack");
+        this.nowPlayingArtHackElem.src = "...";
+        document.body.appendChild(this.nowPlayingArtHackElem);
         this.node = [
             (this.nowPlayingElem = el.div(
                 { class: "nowplaying", id: "nowplaying" },
                 (this.nowPlayingArtElem = el.img({
                     src: "...",
                     id: "nowplaying_art",
-                })),
-                (this.nowPlayingArtHackElem = el.img({
-                    src: "...",
-                    id: "nowplaying_art_hack",
                 })),
                 (this.nowPlayingBtnPreviousElem = el.button(
                     { id: "previous", class: "menubtn" },
