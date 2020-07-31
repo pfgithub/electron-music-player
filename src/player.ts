@@ -1,4 +1,4 @@
-import { $scss, el as qdel } from "./qdom";
+import { $scss } from "./qdom";
 import { App, hack } from "./App";
 import "./_stdlib";
 
@@ -346,12 +346,12 @@ textarea.lyricsedtr-input {
 `;
 
 function spawnParticle(x: number, y: number, text: string) {
-    const particle = qdel.div({ class: "particle" });
-    particle.appendChild(document.createTextNode(text));
-    particle.style.setProperty("--x", x + "px");
-    particle.style.setProperty("--y", y + "px");
-    document.body.appendChild(particle);
-    setTimeout(() => particle.remove(), 1000);
+    el("div")
+        .clss("particle")
+        .styl({ "--x": x + "px", "--y": y + "px" })
+        .atxt(text)
+        .adto(body)
+        .dwth(v => setTimeout(() => v.remove(), 1000));
 }
 
 declare let main: App;
@@ -484,7 +484,7 @@ let lastList = 0;
 let llTimeout: NodeJS.Timeout;
 
 function createLoadingSpinner() {
-    return qdel.span("...");
+    return el("span").atxt("...");
 }
 
 function listMusic() {
@@ -494,83 +494,65 @@ function listMusic() {
         return;
     }
     let loadCount = 0;
-    const newList = qdel.ul(
-        { id: "songlist" },
-        music.map(song => {
-            if (!playlistFilter(song)) {
-                return;
+    const newList = el("ul");
+    for (const song of music) {
+        if (!playlistFilter(song)) {
+            return;
+        }
+        const playing = currentlyPlaying === song.path;
+        const li = el("li")
+            .attr({
+                role: "button",
+                "aria-pressed": "" + playing,
+                tabindex: "0",
+            })
+            .clss(playing ? "playing" : "")
+            .onev("click", e => {
+                e.stopPropagation();
+                queueImmediate(song);
+            })
+            .adto(newList);
+        if (!song.tags) {
+            loadCount++;
+            createLoadingSpinner().adto(li);
+        }
+        if (song.tags) {
+            if (song.tags.art) {
+                el("img")
+                    .attr({ src: song.tags.art })
+                    .clss("icon")
+                    .adto(li);
             }
-            const playing = currentlyPlaying === song.path;
-            const li = qdel.li(
-                {
-                    role: "button",
-                    "aria-pressed": playing ? "true" : "false",
-                    tabindex: "0",
-                    class: playing ? "playing" : "",
-                    $: {
-                        click: (e: MouseEvent) => {
-                            e.stopPropagation();
-                            queueImmediate(song);
-                        },
-                    },
-                },
-                !song.tags && (loadCount++, createLoadingSpinner()),
-                song.tags &&
-                    song.tags.art &&
-                    qdel.img({ src: song.tags.art, class: "icon" }),
-                qdel.span(
-                    {},
-                    song.tags && song.tags.title && song.tags.artist
-                        ? ` ${song.tags.artist} - ${song.tags.title}`
-                        : ` ${song.filename}`,
-                ),
-                qdel.div(
-                    { class: "itembuttons" },
-                    qdel.button(
-                        {
-                            title: "queue",
-                            $: {
-                                click: (e: MouseEvent) => {
-                                    e.stopPropagation();
-                                    queueFinal(song);
-                                    spawnParticle(e.clientX, e.clientY, "+");
-                                },
-                            },
-                        },
-                        "+",
-                    ),
-                ),
-            );
-            if (song.tags && song.tags.color) {
-                if (config.lightMode) {
-                    li.style.setProperty(
-                        "--track-foreground",
-                        song.tags.color.dark.hex(),
-                    );
-                    li.style.setProperty(
-                        "--track-background",
-                        song.tags.color.light.hex(),
-                    );
-                } else {
-                    li.style.setProperty(
-                        "--track-foreground",
-                        song.tags.color.light.hex(),
-                    );
-                    li.style.setProperty(
-                        "--track-background",
-                        song.tags.color.dark.hex(),
-                    );
-                }
-            }
-            return li;
-        }),
-        loadCount > 0 &&
-            qdel.li(
-                {},
-                createLoadingSpinner(),
-                `Loading ${"" + loadCount} more songs...`,
-            ),
-    );
+        }
+        el("span")
+            .atxt(
+                song.tags && song.tags.title && song.tags.artist
+                    ? " " + song.tags.artist + " - " + song.tags.title
+                    : " " + song.filename,
+            )
+            .adto(li);
+        el("button")
+            .adto(
+                el("div")
+                    .adto(li)
+                    .clss("itembuttons"),
+            )
+            .attr({ title: "queue" })
+            .onev("click", e => {
+                e.stopPropagation();
+                queueFinal(song);
+                spawnParticle(e.clientX, e.clientY, "+");
+            });
+        if (song.tags && song.tags.color)
+            li.styl({
+                "--track-foreground": song.tags.color.dark.hex(),
+                "--track-background": song.tags.color.light.hex(),
+            });
+    }
+    if (loadCount > 0)
+        el("li")
+            .adch(createLoadingSpinner())
+            .atxt("Loading " + loadCount + " more songs...");
     elSonglist.parentNode &&
         elSonglist.parentNode.replaceChild(newList, elSonglist);
     elSonglist = newList;
@@ -699,7 +681,7 @@ async function updatePlay() {
 function rerenderPlay() {
     const song = queue[queueIndex]!;
     const songTags = song.tags!;
-    
+
     const elArt = main.nowPlayingArtElem;
     const elArtHack = main.nowPlayingArtHackElem;
     const elTitle = main.nowPlayingTitle;
@@ -784,9 +766,7 @@ function rerenderPlay() {
         commit();
 
         editButton.addEventListener("click", () =>
-            showLyricsEditor(song, songTags, () =>
-                rerenderPlay(),
-            ),
+            showLyricsEditor(song, songTags, () => rerenderPlay()),
         );
 
         console.log(lyricContainer);
