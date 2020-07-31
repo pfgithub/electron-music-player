@@ -376,19 +376,17 @@ if (!(elAudio instanceof HTMLAudioElement)) {
     );
 }
 
+type ColorProperty = {
+    dark: { hex: () => string };
+    light: { hex: () => string };
+};
 type SongTags = {
     title?: string;
     album?: string;
     picture?: { format: string; data: Buffer }[];
-    artBuffer?: Buffer;
-    vibrant?: any;
-    swatches?: any;
     art: string;
     artist?: string;
-    color?: {
-        dark: { hex: () => string };
-        light: { hex: () => string };
-    };
+    color?: ColorProperty;
 };
 type MusicData = {
     filename: string;
@@ -574,28 +572,33 @@ function listMusic() {
 }
 elSearch.addEventListener("input", listMusic);
 
+async function getDarkLight(imgbuffer: Buffer): Promise<ColorProperty> {
+    const vibrant = Vibrant.from(imgbuffer);
+    const swatches = await vibrant.getSwatches();
+
+    let dark = Color(swatches.DarkVibrant.hex);
+    let light = Color(swatches.LightVibrant.hex);
+
+    let contrastRatio = dark.contrast(light);
+
+    while (contrastRatio < config.minContrast) {
+        dark = dark.darken(config.constrastStepChange);
+        light = light.lighten(config.constrastStepChange);
+        contrastRatio = dark.contrast(light);
+    }
+
+    return { dark, light };
+}
+
 async function readTags(filename: string) {
     const songTags = (await mm.parseFile(filename, {})).common as SongTags;
     if (songTags.picture && songTags.picture[0]) {
         songTags.art = `data:${
             songTags.picture[0].format
         };base64,${songTags.picture[0].data.toString("base64")}`;
-        songTags.artBuffer = songTags.picture[0].data;
-        songTags.vibrant = Vibrant.from(songTags.artBuffer);
-        songTags.swatches = await songTags.vibrant.getSwatches();
+        const artBuffer = songTags.picture[0].data;
 
-        let dark = Color(songTags.swatches.DarkVibrant.hex);
-        let light = Color(songTags.swatches.LightVibrant.hex);
-
-        let contrastRatio = dark.contrast(light);
-
-        while (contrastRatio < config.minContrast) {
-            dark = dark.darken(config.constrastStepChange);
-            light = light.lighten(config.constrastStepChange);
-            contrastRatio = dark.contrast(light);
-        }
-
-        songTags.color = { dark, light };
+        songTags.color = await getDarkLight(artBuffer);
     } else {
         songTags.art = `img/no_art.png`;
         songTags.color = { dark: Color("#f00"), light: Color("#fff") };
@@ -677,6 +680,7 @@ async function updatePlay() {
     }
 
     const songTags = song.tags || (await readTags(song.path));
+    if (songTags && !song.tags) song.tags == songTags; // useful for editing
 
     currentlyPlaying = song.path;
     listMusic();
@@ -822,7 +826,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
 
     const fylnmehdng = el("h1").adto(win);
 
-    el("img")
+    const albumArt = el("img")
         .adto(win)
         .clss("lyricsedtr-img")
         .attr({ src: songtags.art })
@@ -847,6 +851,11 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
             btncancel.disabled = true;
             btnsave.disabled = true;
             btnsave.textContent = "Saving...";
+
+            if (imgset) {
+                fs.writeFileSync("/tmp/" + imgset.egname, imgset.buffer);
+            }
+
             // song.path
             ffmetadata.write(
                 song.path,
@@ -856,7 +865,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
                     artist: artistnput.value,
                 },
                 // { attachments: ["/tmp/icon.png"] },
-                {},
+                imgset ? { attachments: ["/tmp/" + imgset.egname] } : {},
                 err => {
                     if (err) {
                         btnsave.textContent = "Save";
@@ -868,6 +877,11 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
                             song.tags.album = txtarya.value;
                             song.tags.title = titlenput.value;
                             song.tags.artist = artistnput.value;
+                            if (imgset) {
+                                song.tags.art = imgset.url;
+                                song.tags.color = imgset.colors;
+                                song.tags.picture = undefined;
+                            }
                         }
                         defer.cleanup();
                     }
@@ -911,6 +925,31 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
         .adto(win)
         .atxt("Lyrics ");
 
+    let imgset:
+        | { url: string; buffer: Buffer; egname: string; colors: ColorProperty }
+        | undefined;
+
+    function setImage(newimg: Buffer, format: string) {
+        getDarkLight(newimg)
+            .then(res => {
+                const srcval =
+                    "data:image/" +
+                    format +
+                    ";base64," +
+                    newimg.toString("base64");
+                albumArt.src = srcval;
+                win.style.setProperty("--background", res.dark.hex());
+                win.style.setProperty("--foreground", res.light.hex());
+                imgset = {
+                    url: srcval,
+                    buffer: newimg,
+                    egname: "__TEMPIMAGE." + format,
+                    colors: res,
+                };
+            })
+            .catch(e => alert(e.stack));
+    }
+
     let lspanel: LyricSearchPanel | undefined;
     const lfbtn = el("button")
         .clss("lyricsedtr-button")
@@ -931,6 +970,8 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
                 titlenput.value.split(" · ")[0],
             updnfo => {
                 txtarya.value = updnfo.lyrics;
+                if (updnfo.image)
+                    setImage(updnfo.image.buffer, updnfo.image.format);
                 console.log(updnfo);
                 txtaryaupd8();
             },
@@ -951,7 +992,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
 }
 
 type LyricResult = {
-    image?: Buffer;
+    image?: { buffer: Buffer; format: string };
     lyrics: string;
 };
 
@@ -1018,7 +1059,19 @@ function lyricSearchPanel(
                         })().catch(() => undefined),
                     ]);
 
-                    update({ lyrics, image });
+                    update({
+                        lyrics,
+                        image: image
+                            ? {
+                                  buffer: image,
+                                  format: result.song_art_image_url.substr(
+                                      result.song_art_image_url.lastIndexOf(
+                                          ".",
+                                      ) + 1,
+                                  ),
+                              }
+                            : undefined,
+                    });
 
                     usebtn.disabled = false;
                     usebtn.innerText = "Use";
