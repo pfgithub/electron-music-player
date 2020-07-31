@@ -3,7 +3,7 @@ declare global {
 	interface Window {
 		el: typeof document.createElement;
 		txt: (t: string) => Text;
-		anychange: (items: (HTMLInputElement | HTMLTextAreaElement)[], cb: () => void) => void;
+		anychange: (items: (HTMLInputElement | HTMLTextAreaElement)[], cb: () => void) => () => void;
 		body: HTMLElement;
 		makeDefer: () => Defer;
 	}
@@ -30,7 +30,7 @@ declare global {
 //@ts-ignore
 window.el = (nme) => document.createElement(nme);
 window.txt = (txt: string) => document.createTextNode(txt);
-window.anychange = (itms, cb) => (itms.forEach(itm => itm.oninput = () => cb()), cb());
+window.anychange = (itms, cb) => {itms.forEach(itm => itm.oninput = () => cb()); cb(); return cb;};
 window.body = document.getElementById("maincontent") || document.body;
 Node.prototype.attr = function(atrs) {Object.entries(atrs).forEach(([k, v]) => (this as any).setAttribute(k, v)); return this;};
 Node.prototype.adto = function(prnt) {prnt.appendChild(this); return this;};

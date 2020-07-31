@@ -23,6 +23,22 @@ import * as mm from "music-metadata";
 import * as Vibrant from "node-vibrant";
 //@ts-ignore
 import * as ffmetadata_ from "ffmetadata";
+import fetch from "node-fetch";
+const Lyricist = (window as any)["require"]("lyricist");
+const Genius = (window as any)["require"]("node-genius");
+
+let lyricsClients: { genius: any; lyricist: any } | undefined;
+try {
+    const secret: { accessToken: string } = JSON.parse(
+        fs.readFileSync("src/secret.json", "utf-8"),
+    );
+    lyricsClients = {
+        genius: new Genius(secret.accessToken),
+        lyricist: new Lyricist(secret.accessToken),
+    };
+} catch (e) {
+    console.log("secret.json not found +", e);
+}
 
 type FFMetadataMetadata = {
     artist?: string;
@@ -267,6 +283,9 @@ li:hover .itembuttons {
 textarea.lyricsedtr-input {
     padding: 10px;
 }
+.lyricsedtr-searchresults {
+    margin-bottom: 10px;
+}
 .lyricsedtr-input {
     width: 100%;
     box-sizing: border-box;
@@ -285,6 +304,15 @@ textarea.lyricsedtr-input {
         box-shadow: inset 0 0 50px -100px var(--background);
     }
 }
+.lyricsedtr-hbox {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+    grid-template-columns: 1fr max-content;
+    & > button {
+        margin: 0;
+    }
+}
 .lyricsedtr-button {
     background-color: var(--foreground);
     padding: 5px;
@@ -295,6 +323,7 @@ textarea.lyricsedtr-input {
     margin-right: 10px;
     border-radius: 5px;
     transition: 0.1s box-shadow;
+    vertical-align: middle;
     &:hover {
         box-shadow: 0 0 10px 0 var(--foreground);
         cursor: pointer; /* too bad */
@@ -806,6 +835,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
         txtarya.disabled = !v;
         titlenput.disabled = !v;
         artistnput.disabled = !v;
+        lfbtn.disabled = !v;
     };
 
     const btnsave = el("button")
@@ -877,9 +907,37 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = songtags.artist || defaultArtist));
 
-    el("h2")
+    const lyrixh2 = el("h2")
         .adto(win)
-        .atxt("Lyrics");
+        .atxt("Lyrics ");
+
+    let lspanel: LyricSearchPanel | undefined;
+    const lfbtn = el("button")
+        .clss("lyricsedtr-button")
+        .adto(lyrixh2)
+        .atxt("Find Lyrics!");
+    lfbtn.onev("click", () => {
+        if (lspanel) {
+            lspanel.close();
+            lspanel = undefined;
+            lfbtn.textContent = "Find Lyrics!";
+            return;
+        }
+        lfbtn.textContent = "Cancel";
+        lspanel = lyricSearchPanel(
+            lyricsearcharea,
+            artistnput.value.split(" · ")[0] +
+                " - " +
+                titlenput.value.split(" · ")[0],
+            updnfo => {
+                txtarya.value = updnfo.lyrics;
+                console.log(updnfo);
+                txtaryaupd8();
+            },
+        );
+    });
+
+    const lyricsearcharea = el("div").adto(win);
 
     const txtarya = el("textarea")
         .adto(el("div").adto(win))
@@ -887,10 +945,131 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = "" + songtags.album));
 
-    anychange([txtarya], () => {
+    const txtaryaupd8 = anychange([txtarya], () => {
         txtarya.rows = txtarya.value.split("\n").length + 1;
     });
 }
+
+type LyricResult = {
+    image?: Buffer;
+    lyrics: string;
+};
+
+type LyricSearchPanel = { close: () => void };
+function lyricSearchPanel(
+    mount: HTMLElement,
+    startSearch: string,
+    update: (lres: LyricResult) => void,
+): LyricSearchPanel {
+    const defer = makeDefer();
+    const resv = { close: () => defer.cleanup() };
+
+    if (!lyricsClients) {
+        alert("No secret!");
+        return resv;
+    }
+
+    const page = el("div")
+        .adto(mount)
+        .drmv(defer);
+
+    const searchBox = el("div")
+        .adto(page)
+        .clss("lyricsedtr-hbox");
+    const searchTerm = el("input")
+        .adto(searchBox)
+        .clss("lyricsedtr-input")
+        .dwth(v => (v.value = startSearch));
+    const searchGoBtn = el("button")
+        .atxt("Search!")
+        .adto(searchBox)
+        .clss("lyricsedtr-button");
+    const resultsArea = el("li")
+        .clss("lyricsedtr-searchresults")
+        .adto(page);
+
+    function updateSearchResults(newResults: GeniusSong[]) {
+        resultsArea.innerHTML = "";
+        for (const { result } of newResults) {
+            const itmnfo = el("li").adto(resultsArea);
+            el("img")
+                .adto(itmnfo)
+                .attr({ src: result.song_art_image_thumbnail_url })
+                .clss("icon")
+                .attr({ style: "visibility: visible" });
+            itmnfo.atxt(" " + result.full_title + " ");
+
+            const usebtn = el("button")
+                .adto(itmnfo)
+                .clss("lyricsedtr-button")
+                .atxt("Use");
+            usebtn.onev("click", () => {
+                usebtn.disabled = true;
+                usebtn.innerText = "Downloading…";
+                (async () => {
+                    const [{ lyrics }, image] = await Promise.all([
+                        lyricsClients!.lyricist.song(result.id, {
+                            fetchLyrics: true,
+                        }),
+                        (async () => {
+                            return await (
+                                await fetch(result.song_art_image_url)
+                            ).buffer();
+                        })().catch(() => undefined),
+                    ]);
+
+                    update({ lyrics, image });
+
+                    usebtn.disabled = false;
+                    usebtn.innerText = "Use";
+                })().catch(e => {
+                    usebtn.disabled = false;
+                    usebtn.innerText = "Use";
+                    alert(e.stack);
+                });
+            });
+        }
+    }
+
+    searchGoBtn.onev("click", () => {
+        searchGoBtn.disabled = true;
+        searchGoBtn.innerText = "Searching…";
+        (async () => {
+            const results: string = await new Promise((r, re) =>
+                lyricsClients!.genius.search(
+                    searchTerm.value,
+                    (e: any, v: any) => (e ? re(e) : r(v)),
+                ),
+            );
+            const prsdreslts: any = JSON.parse(results);
+            console.log(prsdreslts);
+            const hits = prsdreslts.response.hits;
+            const choices = hits.slice(0, 25) as GeniusSong[];
+            updateSearchResults(choices);
+            searchGoBtn.disabled = false;
+            searchGoBtn.innerText = "Search!";
+        })().catch(e => {
+            console.log(e);
+            searchGoBtn.disabled = false;
+            searchGoBtn.innerText = "Search!";
+            resultsArea.innerHTML = "";
+            el("code")
+                .adto(el("pre").adto(resultsArea))
+                .atxt(e.stack);
+        });
+    });
+
+    return resv;
+}
+type GeniusSong = {
+    result: {
+        full_title: string;
+        song: string;
+        song_art_image_thumbnail_url: string;
+        song_art_image_url: string;
+        id: number;
+    };
+};
 
 const holder = document;
 
