@@ -685,7 +685,7 @@ async function updatePlay() {
     currentlyPlaying = song.path;
     listMusic();
 
-    elAudio.src = song.path;
+    elAudio.src = encodeURI(song.path).replace(/\?/g, "%3F");
     playpause(true);
 
     rerenderPlay(song, songTags);
