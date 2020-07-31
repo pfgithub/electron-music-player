@@ -630,7 +630,7 @@ function listMusicElem(parent: HTMLElement, data: Data) {
             const newList = el("ul").clss("songlist");
             for (const song of data.music) {
                 if (!playlistFilter(song, data.filter)) {
-                    return;
+                    continue;
                 }
                 const playing = data.nowPlaying === song;
                 const li = el("li")
