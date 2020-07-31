@@ -105,7 +105,7 @@ $scss`
 	height: 20px;
 }
 body {
-	background-color: var(--background2);
+	background-color: var(--background);
 	color: var(--foreground);
 	padding: 0;
 	margin: 0;
