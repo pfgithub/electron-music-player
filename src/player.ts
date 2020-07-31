@@ -849,7 +849,6 @@ function showLyricsEditor(
         txtarya.disabled = !v;
         titlenput.disabled = !v;
         artistnput.disabled = !v;
-        lfbtn.disabled = !v;
     };
 
     const btnsave = el("button")
