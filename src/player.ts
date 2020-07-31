@@ -607,7 +607,7 @@ async function readTags(filename: string) {
         songTags.color = await getDarkLight(artBuffer);
     } else {
         songTags.art = `img/no_art.png`;
-        songTags.color = { dark: Color("#f00"), light: Color("#fff") };
+        songTags.color = { dark: Color("#a00"), light: Color("#fff") };
     }
     return songTags;
 }
