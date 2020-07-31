@@ -516,14 +516,11 @@ function listMusic() {
             loadCount++;
             createLoadingSpinner().adto(li);
         }
-        if (song.tags) {
-            if (song.tags.art) {
-                el("img")
-                    .attr({ src: song.tags.art })
-                    .clss("icon")
-                    .adto(li);
-            }
-        }
+        if (song.tags && song.tags.art)
+            el("img")
+                .attr({ src: song.tags.art })
+                .clss("icon")
+                .adto(li);
         el("span")
             .atxt(
                 song.tags && song.tags.title && song.tags.artist
@@ -537,6 +534,7 @@ function listMusic() {
                     .adto(li)
                     .clss("itembuttons"),
             )
+            .atxt("+")
             .attr({ title: "queue" })
             .onev("click", e => {
                 e.stopPropagation();
