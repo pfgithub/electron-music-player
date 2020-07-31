@@ -129,6 +129,7 @@ export class App extends QElement {
                     { class: "column" },
                     (this.songListSearchField = el.input({
                         id: "search",
+                        class: "lyricsedtr-input",
                         type: "text",
                         placeholder: "Search...",
                         $: {
@@ -139,7 +140,7 @@ export class App extends QElement {
                 )),
                 (this.songLyricsColumn = el.div(
                     { class: "column" },
-                    (this.nowPlayingLyrics = el.p(
+                    (this.nowPlayingLyrics = el.div(
                         { id: "nowplaying_lyrics" },
                         "...",
                     )),

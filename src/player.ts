@@ -42,24 +42,20 @@ $scss`
 }
 
 .columns {
-	display: flex;
-	flex-flow: wrap;
+	position: absolute;
+	z-index: 10;
+    width: 100%;
+    box-sizing: border-box;
+    
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
 @media screen and (max-width: 600px) {
 	.columns {
-		flex-direction: vertical;
+        grid-template-columns: 1fr;
 	}
-
-	.column {
-		flex-grow: 1;
-		flex-basis: 0;
-	}
-}
-
-.column {
-	flex-grow: 1;
-	flex-basis: 0;
 }
 
 #nowplaying_art {
@@ -169,12 +165,6 @@ button {
 	transform: scale(1.5);
 }
 
-.columns {
-	min-width: calc(100vw - 40px);
-	position: absolute;
-	z-index: 10;
-}
-
 body {
 	overflow-x: hidden;
 }
@@ -239,6 +229,9 @@ li:hover .itembuttons {
     & h1, & h2 {
     	user-select: text;
     }
+    & h2 {
+        margin-bottom: 5px;
+    }
 }
 .lyricsedtr-img {
     width: 80px;
@@ -249,15 +242,18 @@ li:hover .itembuttons {
     border-radius: 10px;
     border: 3px solid var(--foreground);
 }
+textarea.lyricsedtr-input {
+    padding: 10px;
+}
 .lyricsedtr-input {
     width: 100%;
     box-sizing: border-box;
     background-color: var(--foreground);
     color: var(--background);
     border: 0;
-    padding: 10px;
+    padding: 5px 10px;
     box-shadow: inset 0 0 50px -20px var(--background);
-    border-radius: 10px;
+    border-radius: 5px;
     transition: 0.1s box-shadow;
     resize: vertical;
     &:hover {
@@ -676,13 +672,13 @@ async function updatePlay() {
             }
         }
 
-        const lyricContainer = document.createDocumentFragment();
+        const lyricContainerO = document.createDocumentFragment();
 
         const editButton = el("button")
             .clss("lyricsedtr-button")
             .atxt("Edit")
-            .adto(lyricContainer);
-        el("br").adto(lyricContainer);
+            .adto(lyricContainerO);
+        const lyricContainer = el("p").adto(lyricContainerO);
 
         let prevTag = "";
         let text = "";
@@ -727,7 +723,7 @@ async function updatePlay() {
         console.log(lyricContainer);
 
         elLyrics.innerHTML = "";
-        elLyrics.appendChild(lyricContainer);
+        elLyrics.appendChild(lyricContainerO);
     }
 
     renderLyrics();
