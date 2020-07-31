@@ -1,17 +1,17 @@
 {
-	"compilerOptions": {
-		"baseUrl": ".",
-		"paths": { "*": ["types/*"] },
-		"outDir": "./dist",
-		"target": "es2017",
-		"module": "esnext",
-		"noImplicitAny": true,
-		"lib": ["es2017", "dom", "esnext"],
-		"strict": true,
-		"isolatedModules": true,
-		"sourceMap": true,
-		"types": ["node"]
-	},
-	"include": ["src/**/*", "bin/**/*", "test/**/*", "index.ts"],
-	"exclude": ["src/**/*.spec.ts"]
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": { "*": ["types/*"] },
+        "outDir": "./dist",
+        "target": "es2017",
+        "module": "esnext",
+        "noImplicitAny": true,
+        "lib": ["es2017", "dom", "esnext"],
+        "strict": true,
+        "isolatedModules": true,
+        "sourceMap": true,
+        "types": ["node"]
+    },
+    "include": ["src/**/*", "bin/**/*", "test/**/*", "index.ts"],
+    "exclude": ["src/**/*.spec.ts"]
 }

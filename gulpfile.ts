@@ -3,8 +3,11 @@ import * as sourcemaps from "gulp-sourcemaps";
 import * as babel from "gulp-babel";
 import * as concat from "gulp-concat";
 
+// TODO prettier fmt
+
 const all = gulp.series(typescript, html, nocomp);
 export default all;
+gulp.task("all", all);
 
 export async function typescript() {
     return gulp
@@ -15,11 +18,14 @@ export async function typescript() {
         .pipe(gulp.dest("dist"));
 }
 
-export function watch() {
-    gulp.watch("src/**/*.ts", typescript);
-    gulp.watch("src/**/*.html", html);
-    gulp.watch("static/**/*", nocomp);
-}
+gulp.task(
+    "watch",
+    gulp.series("all", () => {
+        gulp.watch("src/**/*.ts", typescript);
+        gulp.watch("src/**/*.html", html);
+        gulp.watch("static/**/*", nocomp);
+    }),
+);
 
 export async function html() {
     return gulp.src("src/**/*.html").pipe(gulp.dest("dist"));

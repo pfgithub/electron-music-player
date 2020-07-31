@@ -1,5 +1,6 @@
-import { $scss, el } from "./qdom";
+import { $scss, el as qdel } from "./qdom";
 import { App, hack } from "./App";
+import "./_stdlib";
 
 hack();
 
@@ -13,7 +14,6 @@ const config = {
 
 import * as fs from "fs"; // .promises
 import * as os from "os";
-import * as url from "url";
 import * as path from "path";
 //@ts-ignore
 import Color from "color";
@@ -224,10 +224,76 @@ li:hover .itembuttons {
     animation: particle 1s;
     animation-fill-mode: both;
 }
+.lyricsedtr {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    max-height: 100vh;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow-y: scroll;
+    z-index: 20;
+    background-color: var(--background);
+    color: var(--foreground);
+    & h1, & h2 {
+    	user-select: text;
+    }
+}
+.lyricsedtr-img {
+    width: 80px;
+    height: 80px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    vertical-align: middle;
+    border-radius: 10px;
+    border: 3px solid var(--foreground);
+}
+.lyricsedtr-input {
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--foreground);
+    color: var(--background);
+    border: 0;
+    padding: 10px;
+    box-shadow: inset 0 0 50px -20px var(--background);
+    border-radius: 10px;
+    transition: 0.1s box-shadow;
+    resize: vertical;
+    &:hover {
+        box-shadow: inset 0 0 50px -30px var(--background);
+    }
+    &:focus {
+        box-shadow: inset 0 0 50px -100px var(--background);
+    }
+}
+.lyricsedtr-button {
+    background-color: var(--foreground);
+    padding: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    color: var(--background);
+    box-shadow: 0 1px 10px -3px var(--foreground);
+    margin-right: 10px;
+    border-radius: 5px;
+    transition: 0.1s box-shadow;
+    &:hover {
+        box-shadow: 0 0 10px 0 var(--foreground);
+        cursor: pointer; /* too bad */
+    }
+    &.lyricsedtr-button-cancel {
+        background-color: var(--background);
+        color: var(--foreground);
+        box-shadow: none;
+        &:hover {
+            box-shadow: 0 0 10px -3px var(--foreground);
+        }
+    }
+}
 `;
 
 function spawnParticle(x: number, y: number, text: string) {
-    const particle = el.div({ class: "particle" });
+    const particle = qdel.div({ class: "particle" });
     particle.appendChild(document.createTextNode(text));
     particle.style.setProperty("--x", x + "px");
     particle.style.setProperty("--y", y + "px");
@@ -263,7 +329,26 @@ if (!(elAudio instanceof HTMLAudioElement)) {
     );
 }
 
-type MusicData = { filename: string; path: string; uuid: symbol; tags: any };
+type SongTags = {
+    title?: string;
+    album?: string;
+    picture?: { format: string; data: Buffer }[];
+    artBuffer?: Buffer;
+    vibrant?: any;
+    swatches?: any;
+    art: string;
+    artist?: string;
+    color?: {
+        dark: { hex: () => string };
+        light: { hex: () => string };
+    };
+};
+type MusicData = {
+    filename: string;
+    path: string;
+    uuid: symbol;
+    tags: SongTags | undefined;
+};
 
 const queue: (MusicData | undefined)[] = [];
 let queueIndex = 0;
@@ -306,7 +391,7 @@ function addMusic(musicPath: string, depth = 1): void {
         filename: path.basename(musicPath),
         path: musicPath,
         uuid: Symbol(musicPath),
-        tags: undefined,
+        tags: undefined as any,
     };
     music.push(song);
 }
@@ -316,7 +401,8 @@ const savedregex = { regex: new RegExp(""), text: "" };
 const playlistFilter = (song: MusicData) => {
     let searchdata = song.filename;
     if (song.tags) {
-        searchdata += ` ${song.tags.title} ${song.tags.author} ${song.tags.album}`;
+        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" +
+            song.tags.album}`;
     }
 
     const searchValue = elSearch.value;
@@ -347,7 +433,7 @@ let lastList = 0;
 let llTimeout: NodeJS.Timeout;
 
 function createLoadingSpinner() {
-    return el.span("...");
+    return qdel.span("...");
 }
 
 function listMusic() {
@@ -357,14 +443,14 @@ function listMusic() {
         return;
     }
     let loadCount = 0;
-    const newList = el.ul(
+    const newList = qdel.ul(
         { id: "songlist" },
         music.map(song => {
             if (!playlistFilter(song)) {
                 return;
             }
             const playing = currentlyPlaying === song.path;
-            const li = el.li(
+            const li = qdel.li(
                 {
                     role: "button",
                     "aria-pressed": playing ? "true" : "false",
@@ -380,16 +466,16 @@ function listMusic() {
                 !song.tags && (loadCount++, createLoadingSpinner()),
                 song.tags &&
                     song.tags.art &&
-                    el.img({ src: song.tags.art, class: "icon" }),
-                el.span(
+                    qdel.img({ src: song.tags.art, class: "icon" }),
+                qdel.span(
                     {},
                     song.tags && song.tags.title && song.tags.artist
                         ? `${song.tags.title} by ${song.tags.artist}`
                         : `${song.filename}`,
                 ),
-                el.div(
+                qdel.div(
                     { class: "itembuttons" },
-                    el.button(
+                    qdel.button(
                         {
                             title: "queue",
                             $: {
@@ -428,10 +514,10 @@ function listMusic() {
             return li;
         }),
         loadCount > 0 &&
-            el.li(
+            qdel.li(
                 {},
                 createLoadingSpinner(),
-                `Loading ${loadCount} more songs...`,
+                `Loading ${"" + loadCount} more songs...`,
             ),
     );
     elSonglist.parentNode &&
@@ -442,7 +528,7 @@ function listMusic() {
 elSearch.addEventListener("input", listMusic);
 
 async function readTags(filename: string) {
-    const songTags = (await mm.parseFile(filename, {})).common;
+    const songTags = (await mm.parseFile(filename, {})).common as SongTags;
     if (songTags.picture && songTags.picture[0]) {
         songTags.art = `data:${
             songTags.picture[0].format
@@ -564,11 +650,11 @@ async function updatePlay() {
 
     elArt.src = songTags.art;
     elArtHack.src = songTags.art;
-    elTitle.innerText = songTags.title;
-    elArtist.innerText = songTags.artist;
+    elTitle.innerText = "" + songTags.title;
+    elArtist.innerText = "" + songTags.artist;
 
     function renderLyrics() {
-        const lyricsHL = `${songTags.album}`.split("");
+        const lyricsHL = `${"" + songTags.album}`.split("");
         let lowercaseLyrics = lyricsHL.join("").toLowerCase();
         const charsHL = " ".repeat(lyricsHL.length).split("");
 
@@ -591,6 +677,13 @@ async function updatePlay() {
         }
 
         const lyricContainer = document.createDocumentFragment();
+
+        const editButton = el("button")
+            .clss("lyricsedtr-button")
+            .atxt("Edit")
+            .adto(lyricContainer);
+        el("br").adto(lyricContainer);
+
         let prevTag = "";
         let text = "";
         let commit = () => {};
@@ -627,53 +720,14 @@ async function updatePlay() {
         });
         commit();
 
-        const editButton = document.createElement("button");
-        editButton.appendChild(document.createTextNode("Edit"));
-        lyricContainer.appendChild(document.createElement("br"));
-        lyricContainer.appendChild(editButton);
-
-        editButton.addEventListener("click", () => renderLyricsEditor());
+        editButton.addEventListener("click", () =>
+            showLyricsEditor(song!, songTags),
+        );
 
         console.log(lyricContainer);
 
         elLyrics.innerHTML = "";
         elLyrics.appendChild(lyricContainer);
-    }
-
-    function renderLoader() {
-        elLyrics.innerHTML = "loading...";
-    }
-
-    function renderLyricsEditor() {
-        const btnSave = document.createElement("button");
-        btnSave.appendChild(document.createTextNode("save"));
-        const btnCancel = document.createElement("button");
-        btnSave.appendChild(document.createTextNode("cancel"));
-
-        const textarea = document.createElement("textarea");
-        textarea.value = songTags.album;
-
-        btnCancel.onclick = () => renderLyrics();
-        // btnSave.onclick = async () => {
-        //     const newValue = textarea.value;
-        //     songTags.album = newValue;
-        //     let image = await renderImageSelector();
-        //     renderLoader();
-        //     await pify(_ =>
-        //         ffmetadata.write(
-        //             filename,
-        //             { album: newValue },
-        //             { attachments: ["/tmp/icon.png"] },
-        //             _,
-        //         ),
-        //     );
-        //     renderLyrics();
-        // };
-
-        elLyrics.innerHTML = "";
-        elLyrics.appendChild(btnSave);
-        elLyrics.appendChild(btnCancel);
-        elLyrics.appendChild(textarea);
     }
 
     renderLyrics();
@@ -706,6 +760,79 @@ async function updatePlay() {
     }
 }
 
+function showLyricsEditor(song: MusicData, songtags: SongTags) {
+    const defer = makeDefer();
+
+    const win = el("div")
+        .adto(body)
+        .clss(".lyricsedtr")
+        .drmv(defer);
+
+    win.setAttribute(
+        "style",
+        document.documentElement.getAttribute("style") || "",
+    );
+
+    const fylnmehdng = el("h1").adto(win);
+
+    el("img")
+        .adto(win)
+        .clss("lyricsedtr-img")
+        .attr({ src: songtags.art })
+        .adto(fylnmehdng);
+    fylnmehdng.atxt(song.filename);
+
+    const btnsave = el("button")
+        .adto(win)
+        .atxt("Save")
+        .clss("lyricsedtr-button")
+        .onev("click", () => {
+            alert("TODO");
+        });
+
+    const btncancel = el("button")
+        .adto(win)
+        .atxt("Cancel")
+        .clss("lyricsedtr-button.lyricsedtr-button-cancel")
+        .onev("click", () => {
+            defer.cleanup();
+        });
+
+    el("h2")
+        .adto(win)
+        .atxt("Title");
+
+    const titlenput = el("input")
+        .adto(el("div").adto(win))
+        .attr({ placeholder: "Title..." })
+        .clss("lyricsedtr-input")
+        .dwth(v => (v.value = "" + songtags.title));
+
+    el("h2")
+        .adto(win)
+        .atxt("Author");
+
+    const authornput = el("input")
+        .adto(el("div").adto(win))
+        .attr({ placeholder: "Author..." })
+        .clss("lyricsedtr-input")
+        .dwth(v => (v.value = "" + songtags.artist));
+
+    el("h2")
+        .adto(win)
+        .atxt("Lyrics");
+
+    const txtarya = el("textarea")
+        .adto(el("div").adto(win))
+        .attr({ placeholder: "Lyrics..." })
+        .clss("lyricsedtr-input")
+        .dwth(v => (v.value = "" + songtags.album));
+
+    anychange([txtarya], () => {
+        txtarya.rows = txtarya.value.split("\n").length + 1;
+    });
+}
+
 const holder = document;
 
 holder.ondragover = () => {
@@ -729,7 +856,7 @@ holder.ondrop = e => {
         return;
     }
     console.log("Adding", e.dataTransfer.files.length, "files.");
-    Array.from(e.dataTransfer.files).forEach(f => addMusic(f.path));
+    Array.from(e.dataTransfer.files).forEach(f => addMusic((f as any).path));
     loadMusic();
 
     return false;
