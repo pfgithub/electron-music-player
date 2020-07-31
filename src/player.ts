@@ -455,7 +455,6 @@ function MusicPlayer(mount: HTMLElement) {
                 return;
             } //workaround for circular symlinks
             const lstat = fs.statSync(musicPath);
-            console.log(lstat.isDirectory());
             if (lstat.isDirectory()) {
                 return fs
                     .readdirSync(musicPath)
@@ -606,13 +605,11 @@ function listMusicElem(parent: HTMLElement, data: Data) {
             songlistul.remove();
         },
         update() {
-            console.log("UPDATE REQUESTED");
             if (
                 data.filter === prevData.filter &&
                 data.musicUpdated === prevData.musicUpdated &&
                 data.nowPlaying === prevData.currentlyPlaying
             ) {
-                console.log("UPDATE NOTHING CHANGED");
                 return; // nothing changed
             }
             prevData.filter = data.filter;
@@ -620,12 +617,10 @@ function listMusicElem(parent: HTMLElement, data: Data) {
             prevData.currentlyPlaying = data.nowPlaying;
 
             if (new Date().getTime() - config.updateSpeedLimit < lastList) {
-                console.log("UPDATE WAITING");
                 llTimeout && clearTimeout(llTimeout);
                 llTimeout = setTimeout(() => res.update(), config.updateSpeedLimit);
                 return;
             }
-            console.log("UPDATE NOW");
             let loadCount = 0;
             const newList = el("ul").clss("songlist");
             for (const song of data.music) {
@@ -687,7 +682,6 @@ function listMusicElem(parent: HTMLElement, data: Data) {
             songlistul.remove();
             songlistul = newList.adto(parent);
             lastList = new Date().getTime();
-            console.log("replaced");
         },
     };
     return res;
@@ -969,8 +963,14 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             btnsave.disabled = true;
             btnsave.textContent = "Saving...";
 
+            let atchmntnme = "";
             if (imgset) {
-                fs.writeFileSync("/tmp/" + imgset.egname, imgset.buffer);
+                atchmntnme = "/tmp/" + imgset.egname;
+                fs.writeFileSync(atchmntnme, imgset.buffer);
+            } else if (songtags.picture && songtags.picture[0]) {
+                const fmtval = songtags.picture[0].format;
+                atchmntnme = "/tmp/" + "__CONTINUE." + fmtval.substr(fmtval.lastIndexOf("/") + 1);
+                fs.writeFileSync(atchmntnme, songtags.picture[0].data);
             }
 
             // song.path
@@ -982,7 +982,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
                     artist: artistnput.value,
                 },
                 // { attachments: ["/tmp/icon.png"] },
-                imgset ? { attachments: ["/tmp/" + imgset.egname] } : {},
+                atchmntnme ? { attachments: [atchmntnme] } : {},
                 err => {
                     if (err) {
                         btnsave.textContent = "Save";
