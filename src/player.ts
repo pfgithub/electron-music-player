@@ -21,6 +21,28 @@ import Color from "color";
 import * as mm from "music-metadata";
 //@ts-ignore
 import * as Vibrant from "node-vibrant";
+//@ts-ignore
+import * as ffmetadata_ from "ffmetadata";
+
+type FFMetadataMetadata = {
+    artist?: string;
+    album?: string;
+    title?: string;
+    track?: string;
+    disc?: string;
+    label?: string;
+    date?: string;
+};
+type FFMetadataOptions = { attachments?: string[] };
+type FFMetadata = {
+    write: (
+        path: string,
+        m1: FFMetadataMetadata,
+        options: FFMetadataOptions,
+        cb: (e?: Error) => void,
+    ) => void;
+};
+const ffmetadata = ffmetadata_ as FFMetadata;
 
 $scss`
 :root {
@@ -778,12 +800,49 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
         .adto(fylnmehdng);
     fylnmehdng.atxt(song.filename);
 
+    const setEnabled = (v: boolean) => {
+        btncancel.disabled = !v;
+        btnsave.disabled = !v;
+        txtarya.disabled = !v;
+        titlenput.disabled = !v;
+        artistnput.disabled = !v;
+    };
+
     const btnsave = el("button")
         .adto(win)
         .atxt("Save")
         .clss("lyricsedtr-button")
         .onev("click", () => {
-            alert("TODO");
+            setEnabled(false);
+            btncancel.disabled = true;
+            btnsave.disabled = true;
+            btnsave.textContent = "Saving...";
+            // song.path
+            ffmetadata.write(
+                song.path,
+                {
+                    album: txtarya.value,
+                    title: titlenput.value,
+                    artist: artistnput.value,
+                },
+                // { attachments: ["/tmp/icon.png"] },
+                {},
+                err => {
+                    if (err) {
+                        btnsave.textContent = "Save";
+                        setEnabled(true);
+                        console.log(err);
+                        alert("" + err);
+                    } else {
+                        if (song.tags) {
+                            song.tags.album = txtarya.value;
+                            song.tags.title = titlenput.value;
+                            song.tags.artist = artistnput.value;
+                        }
+                        defer.cleanup();
+                    }
+                },
+            );
         });
 
     const btncancel = el("button")
@@ -798,21 +857,25 @@ function showLyricsEditor(song: MusicData, songtags: SongTags) {
         .adto(win)
         .atxt("Title");
 
+    const [defaultArtist, defaultTitle] = song.filename
+        .replace(".mp3", "")
+        .split(" - ");
+
     const titlenput = el("input")
         .adto(el("div").adto(win))
         .attr({ placeholder: "Title..." })
         .clss("lyricsedtr-input")
-        .dwth(v => (v.value = "" + songtags.title));
+        .dwth(v => (v.value = songtags.title || defaultTitle));
 
     el("h2")
         .adto(win)
         .atxt("Author");
 
-    const authornput = el("input")
+    const artistnput = el("input")
         .adto(el("div").adto(win))
         .attr({ placeholder: "Author..." })
         .clss("lyricsedtr-input")
-        .dwth(v => (v.value = "" + songtags.artist));
+        .dwth(v => (v.value = songtags.artist || defaultArtist));
 
     el("h2")
         .adto(win)
