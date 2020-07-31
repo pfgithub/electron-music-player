@@ -1079,7 +1079,17 @@ function lyricSearchPanel(
         }
     }
 
-    searchGoBtn.onev("click", () => {
+    searchGoBtn.onev("click", () => dosearch());
+    searchBox.onev("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            return dosearch();
+        }
+    });
+
+    const dosearch = () => {
+        if (searchGoBtn.disabled) return;
         searchGoBtn.disabled = true;
         searchGoBtn.innerText = "Searching…";
         (async () => {
@@ -1105,7 +1115,7 @@ function lyricSearchPanel(
                 .adto(el("pre").adto(resultsArea))
                 .atxt(e.stack);
         });
-    });
+    };
 
     return resv;
 }
