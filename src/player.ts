@@ -16,7 +16,7 @@ import * as fs from "fs"; // .promises
 import * as os from "os";
 import * as path from "path";
 //@ts-ignore
-import Color from "color";
+import Color_ from "color";
 //@ts-ignore
 import * as mm from "music-metadata";
 //@ts-ignore
@@ -382,9 +382,16 @@ if (!(elAudio instanceof HTMLAudioElement)) {
     );
 }
 
+type Color = {
+    hex: () => string;
+    contrast: (other: Color) => number;
+    darken: (step: number) => Color;
+    lighten: (step: number) => Color;
+};
+const Color: (hex: string) => Color = Color_;
 type ColorProperty = {
-    dark: { hex: () => string };
-    light: { hex: () => string };
+    dark: Color;
+    light: Color;
 };
 type SongTags = {
     title?: string;
