@@ -41,7 +41,7 @@ Node.prototype.atxt = function(txta) {this.appendChild(txt(txta)); return this;}
 //eslint-disable-next-line
 Node.prototype.onev = function(...a) {this.addEventListener(...a); return this;};
 Node.prototype.drmv = function(defer) {defer(() => (this as any).remove()); return this;};
-Node.prototype.clss = function(...clss) {clss.filter(q => q).forEach(clitm => clitm.split(".").filter(q => q).map(itm => (this as any).classList.add(itm))); return this;};
+Node.prototype.clss = function(...clss) {clss.forEach(clitm => clitm.split(".").filter(q => q).map(itm => (this as any).classList.add(itm))); return this;};
 Node.prototype.styl = function(styl) {Object.entries(styl).forEach(([k, v]) => this.style.setProperty(k, v)); return this;};
 Object.prototype.dwth = function(cb) {cb(this); return this;};
 Object.defineProperty(Array.prototype, "last", {get: function() {return this[this.length - 1]}});

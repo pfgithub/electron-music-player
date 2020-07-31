@@ -1,5 +1,5 @@
 import { $scss } from "./qdom";
-import { App, hack } from "./App";
+import { hack } from "./App";
 import "./_stdlib";
 
 hack();
@@ -29,9 +29,7 @@ const Genius = (window as any)["require"]("node-genius");
 
 let lyricsClients: { genius: any; lyricist: any } | undefined;
 try {
-    const secret: { accessToken: string } = JSON.parse(
-        fs.readFileSync("src/secret.json", "utf-8"),
-    );
+    const secret: { accessToken: string } = JSON.parse(fs.readFileSync("src/secret.json", "utf-8"));
     lyricsClients = {
         genius: new Genius(secret.accessToken),
         lyricist: new Lyricist(secret.accessToken),
@@ -51,12 +49,7 @@ type FFMetadataMetadata = {
 };
 type FFMetadataOptions = { attachments?: string[] };
 type FFMetadata = {
-    write: (
-        path: string,
-        m1: FFMetadataMetadata,
-        options: FFMetadataOptions,
-        cb: (e?: Error) => void,
-    ) => void;
+    write: (path: string, m1: FFMetadataMetadata, options: FFMetadataOptions, cb: (e?: Error) => void) => void;
 };
 const ffmetadata = ffmetadata_ as FFMetadata;
 
@@ -72,10 +65,10 @@ $scss`
 }
 .vlitem {
 }
-#nowplaying_title {
+.nowplaying_title {
 	font-weight: bold;
 }
-#nowplaying_artist {
+.nowplaying_artist {
 	font-style: italic;
 }
 
@@ -96,7 +89,7 @@ $scss`
 	}
 }
 
-#nowplaying_art {
+.nowplaying_art {
 	width: 60px;
 	height: 60px;
 }
@@ -112,7 +105,7 @@ body {
 	font-family: sans-serif;
 	user-select: none;
 }
-#nowplaying_lyrics {
+.nowplaying_lyrics {
 	user-select: text;
 }
 body > div {
@@ -163,10 +156,10 @@ li > a {
 .btnpause {
 	display: none;
 }
-#playpause.play > .btnpause {
+.playpause.play > .btnpause {
 	display: block;
 }
-#playpause:not(.play) > .btnplay {
+.playpause:not(.play) > .btnplay {
 	display: block;
 }
 button {
@@ -343,7 +336,13 @@ textarea.lyricsedtr-input {
         }
     }
 }
+.lyrics {
+    white-space: pre-wrap;
+}
 `;
+
+let lastList = 0;
+let llTimeout: NodeJS.Timeout;
 
 function spawnParticle(x: number, y: number, text: string) {
     el("div")
@@ -352,34 +351,6 @@ function spawnParticle(x: number, y: number, text: string) {
         .atxt(text)
         .adto(body)
         .dwth(v => setTimeout(() => v.remove(), 1000));
-}
-
-declare let main: App;
-
-const elAudio = main.nowPlayingAudio;
-const elSkip = main.nowPlayingBtnSkipForwardElem;
-const elPrevious = main.nowPlayingBtnPreviousElem;
-let elSonglist = main.songListElem;
-const elSearch = main.songListSearchField;
-const elPlaypause = main.nowPlayingBtnPlaypauseElem;
-
-if (
-    !elAudio ||
-    !elSkip ||
-    !elPrevious ||
-    !elSonglist ||
-    !elSearch ||
-    !elPlaypause
-) {
-    alert("An element was missing during initialization.");
-    throw new Error("An element was missing during initialization.");
-}
-
-if (!(elAudio instanceof HTMLAudioElement)) {
-    alert("Audio element was incorrect during initialization.");
-    throw new Error(
-        "Audio element element was incorrect during initialization.",
-    );
 }
 
 type Color = {
@@ -408,62 +379,331 @@ type MusicData = {
     tags: SongTags | undefined;
 };
 
-const queue: (MusicData | undefined)[] = [];
-let queueIndex = 0;
+function MusicPlayer(mount: HTMLElement) {
+    const defer = makeDefer();
 
-elPlaypause.addEventListener("click", (e /*: MouseEvent*/) => {
-    e.stopPropagation();
-    playpause();
-});
+    const fsimg = el("img")
+        .clss("fullscreen_bg.fullscreen_blurred_image")
+        .adto(mount)
+        .drmv(defer);
+    el("div")
+        .clss("fullscreen_bg.fullscreen_overlay")
+        .adto(mount)
+        .drmv(defer);
 
-function playpause(value?: boolean): void {
-    if (value === undefined) {
-        return playpause(elAudio.paused);
+    const nowPlayingBar = el("div")
+        .clss("nowplaying")
+        .adto(mount)
+        .drmv(defer);
+
+    const cols = el("div")
+        .clss("columns")
+        .adto(mount)
+        .drmv(defer);
+    const songlistcol = el("div")
+        .clss("column")
+        .adto(cols);
+    const songlistsearch = el("input")
+        .clss(".search.lyricsedtr-input")
+        .adto(songlistcol)
+        .attr({ type: "text", placeholder: "Search..." });
+    const songlyricscol = el("div")
+        .clss("column")
+        .adto(cols);
+
+    const queue: (MusicData | undefined)[] = [];
+    let queueIndex = 0;
+
+    function setQueueIndex(envy: number) {
+        queueIndex = envy;
+        while (queueIndex < 0) {
+            queue.unshift(undefined);
+            queueIndex += 1;
+        }
+        if (!queue[queueIndex]) queue[queueIndex] = randomOfArray(data.music);
+        data.nowPlaying = queue[queueIndex];
+        data.nowPlayingUpdated += 1;
+        data.update();
     }
-    if (value) {
-        elAudio.play();
-        elPlaypause.classList.add("play");
-    } else {
-        elAudio.pause();
-        elPlaypause.classList.remove("play");
-    }
-}
 
-let currentlyPlaying: string;
-const music: MusicData[] = [];
+    const data: Data = {
+        play: true,
+        filter: "",
+        music: [] as MusicData[],
+        musicUpdated: 1,
 
-function addMusic(musicPath: string, depth = 1): void {
-    if (depth > config.maxMusicSearchDepth) {
-        return;
-    } //workaround for circular symlinks
-    const lstat = fs.statSync(musicPath);
-    console.log(lstat.isDirectory());
-    if (lstat.isDirectory()) {
-        return fs
-            .readdirSync(musicPath)
-            .forEach(subPath =>
-                addMusic(path.join(musicPath, subPath), depth + 1),
-            );
-    }
-    const song = {
-        filename: path.basename(musicPath),
-        path: musicPath,
-        uuid: Symbol(musicPath),
-        tags: undefined as any,
+        nowPlaying: undefined,
+        nowPlayingUpdated: 1,
+
+        queueImmediate(song: MusicData) {
+            queue.push(song);
+            setQueueIndex(queue.length - 1);
+        },
+        queueFinal(song: MusicData) {
+            queue.push(song);
+            data.update();
+        },
+        addQueue(diff: number) {
+            setQueueIndex(queueIndex + diff);
+        },
+        playNext() {
+            data.play = true;
+            setQueueIndex(queueIndex + 1);
+        },
+        addMusic(musicPath: string, depth = 1): void {
+            if (depth > config.maxMusicSearchDepth) {
+                return;
+            } //workaround for circular symlinks
+            const lstat = fs.statSync(musicPath);
+            console.log(lstat.isDirectory());
+            if (lstat.isDirectory()) {
+                return fs
+                    .readdirSync(musicPath)
+                    .forEach(subPath => data.addMusic(path.join(musicPath, subPath), depth + 1));
+            }
+            const song = {
+                filename: path.basename(musicPath),
+                path: musicPath,
+                uuid: Symbol(musicPath),
+                tags: undefined as any,
+            };
+            readTags(song.path).then(tags => {
+                song.tags = tags;
+                data.musicUpdated++;
+                data.update();
+            });
+
+            data.music.push(song);
+            data.musicUpdated++;
+            data.update();
+        },
+        update() {
+            musiclist.update();
+            nowplaying.update();
+            lyricview.update();
+            if (data.filter !== prevData.filter) {
+                prevData.filter = data.filter;
+            }
+            const song = data.nowPlaying;
+            const artsrc = song && song.tags ? song.tags.art || "" : "";
+            if (fsimg.src !== artsrc) fsimg.src = artsrc;
+        },
     };
-    music.push(song);
+    const prevData = {
+        filter: "",
+    };
+
+    const musiclist = listMusicElem(songlistcol, data);
+    const nowplaying = nowPlayingElem(nowPlayingBar, data);
+    const lyricview = lyricViewElem(songlyricscol, data);
+
+    data.update();
+
+    songlistsearch.onev("input", () => {
+        data.filter = songlistsearch.value;
+        data.update();
+    });
+
+    return data;
 }
+
+type Data = {
+    play: boolean;
+    filter: string;
+    music: MusicData[];
+    musicUpdated: number;
+    nowPlaying: MusicData | undefined;
+    nowPlayingUpdated: number;
+
+    queueImmediate(song: MusicData): void;
+    queueFinal(song: MusicData): void;
+    playNext(): void;
+    addMusic(musicPath: string, depth?: number): void;
+    update(): void;
+    addQueue(diff: number): void;
+};
+
+function lyricViewElem(parent: HTMLElement, data: Data) {
+    const defer = makeDefer();
+    const nowPlayingLyrics = el("div")
+        .clss("nowplaying_lyrics")
+        .adto(parent)
+        .drmv(defer);
+
+    const editButton = el("button")
+        .clss("lyricsedtr-button")
+        .atxt("…")
+        .adto(nowPlayingLyrics);
+    const lyricContainer = txt("…").adto(
+        el("p")
+            .clss("lyrics")
+            .adto(nowPlayingLyrics),
+    );
+
+    const prevData = {
+        lyrics: undefined as any,
+        allowEdit: undefined as any,
+    };
+
+    let lyricsEditorVisible = false;
+
+    editButton.onev("click", e => {
+        e.stopPropagation();
+        if (!data.nowPlaying || !data.nowPlaying.tags || lyricsEditorVisible) {
+            return; // nope.
+        }
+        lyricsEditorVisible = true;
+        showLyricsEditor(data.nowPlaying, data.nowPlaying.tags, () => {
+            lyricsEditorVisible = false;
+            data.update();
+        });
+    });
+
+    const res = {
+        update() {
+            const thisLyrics = data.nowPlaying
+                ? data.nowPlaying.tags
+                    ? data.nowPlaying.tags.album || "undefined"
+                    : "…"
+                : "Not playing";
+            if (thisLyrics !== prevData.lyrics) {
+                prevData.lyrics = thisLyrics;
+                lyricContainer.nodeValue = thisLyrics;
+            }
+            let allowEdit = false;
+            if (data.nowPlaying && data.nowPlaying.tags) {
+                allowEdit = true;
+            }
+            if (allowEdit !== prevData.allowEdit) {
+                prevData.allowEdit = allowEdit;
+                editButton.disabled = !allowEdit;
+                if (allowEdit) {
+                    editButton.textContent = "Edit!";
+                } else {
+                    editButton.textContent = "…";
+                }
+            }
+        },
+    };
+    return res;
+}
+
+function listMusicElem(parent: HTMLElement, data: Data) {
+    const prevData = {
+        filter: undefined as any,
+        musicUpdated: undefined as any,
+        currentlyPlaying: undefined as any,
+    };
+
+    const defer = makeDefer();
+    let songlistul = el("ul")
+        .adto(parent)
+        .clss("songlist");
+
+    const res = {
+        remove() {
+            defer.cleanup();
+            songlistul.remove();
+        },
+        update() {
+            console.log("UPDATE REQUESTED");
+            if (
+                data.filter === prevData.filter &&
+                data.musicUpdated === prevData.musicUpdated &&
+                data.nowPlaying === prevData.currentlyPlaying
+            ) {
+                console.log("UPDATE NOTHING CHANGED");
+                return; // nothing changed
+            }
+            prevData.filter = data.filter;
+            prevData.musicUpdated = data.musicUpdated;
+            prevData.currentlyPlaying = data.nowPlaying;
+
+            if (new Date().getTime() - config.updateSpeedLimit < lastList) {
+                console.log("UPDATE WAITING");
+                llTimeout && clearTimeout(llTimeout);
+                llTimeout = setTimeout(() => res.update(), config.updateSpeedLimit);
+                return;
+            }
+            console.log("UPDATE NOW");
+            let loadCount = 0;
+            const newList = el("ul").clss("songlist");
+            for (const song of data.music) {
+                if (!playlistFilter(song, data.filter)) {
+                    return;
+                }
+                const playing = data.nowPlaying === song;
+                const li = el("li")
+                    .attr({
+                        role: "button",
+                        "aria-pressed": "" + playing,
+                        tabindex: "0",
+                    })
+                    .clss(playing ? "playing" : "")
+                    .onev("click", e => {
+                        e.stopPropagation();
+                        data.queueImmediate(song);
+                    })
+                    .adto(newList);
+                if (!song.tags) {
+                    loadCount++;
+                    createLoadingSpinner().adto(li);
+                }
+                if (song.tags && song.tags.art)
+                    el("img")
+                        .attr({ src: song.tags.art })
+                        .clss("icon")
+                        .adto(li);
+                el("span")
+                    .atxt(
+                        song.tags && song.tags.title && song.tags.artist
+                            ? " " + song.tags.artist + " - " + song.tags.title
+                            : " " + song.filename,
+                    )
+                    .adto(li);
+                el("button")
+                    .adto(
+                        el("div")
+                            .adto(li)
+                            .clss("itembuttons"),
+                    )
+                    .atxt("+")
+                    .attr({ title: "queue" })
+                    .onev("click", e => {
+                        e.stopPropagation();
+                        data.queueFinal(song);
+                        spawnParticle(e.clientX, e.clientY, "+");
+                    });
+                if (song.tags && song.tags.color)
+                    li.styl({
+                        "--track-foreground": song.tags.color.dark.hex(),
+                        "--track-background": song.tags.color.light.hex(),
+                    });
+            }
+            if (loadCount > 0)
+                el("li")
+                    .adch(createLoadingSpinner())
+                    .atxt("Loading " + loadCount + " more songs...");
+            songlistul.remove();
+            songlistul = newList.adto(parent);
+            lastList = new Date().getTime();
+            console.log("replaced");
+        },
+    };
+    return res;
+}
+
+const musicPlayer = MusicPlayer(body);
 
 const savedregex = { regex: new RegExp(""), text: "" };
 
-const playlistFilter = (song: MusicData) => {
+const playlistFilter = (song: MusicData, filterStr: string) => {
     let searchdata = song.filename;
     if (song.tags) {
-        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" +
-            song.tags.album}`;
+        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.album}`;
     }
 
-    const searchValue = elSearch.value;
+    const searchValue = filterStr;
     if (searchValue.startsWith("!")) {
         return searchdata.includes(searchValue.substr(1));
     }
@@ -480,90 +720,12 @@ const playlistFilter = (song: MusicData) => {
     const searchTerm = searchValue.toLowerCase();
     return searchTerm
         .split(" ")
-        .every(i =>
-            searchdata.includes(i)
-                ? ((searchdata = searchdata.replace(i, "")), true)
-                : false,
-        );
+        .every(i => (searchdata.includes(i) ? ((searchdata = searchdata.replace(i, "")), true) : false));
 };
-
-let lastList = 0;
-let llTimeout: NodeJS.Timeout;
 
 function createLoadingSpinner() {
     return el("span").atxt("...");
 }
-
-function listMusic() {
-    if (new Date().getTime() - config.updateSpeedLimit < lastList) {
-        llTimeout && clearTimeout(llTimeout);
-        llTimeout = setTimeout(listMusic, config.updateSpeedLimit);
-        return;
-    }
-    let loadCount = 0;
-    const newList = el("ul");
-    for (const song of music) {
-        if (!playlistFilter(song)) {
-            return;
-        }
-        const playing = currentlyPlaying === song.path;
-        const li = el("li")
-            .attr({
-                role: "button",
-                "aria-pressed": "" + playing,
-                tabindex: "0",
-            })
-            .clss(playing ? "playing" : "")
-            .onev("click", e => {
-                e.stopPropagation();
-                queueImmediate(song);
-            })
-            .adto(newList);
-        if (!song.tags) {
-            loadCount++;
-            createLoadingSpinner().adto(li);
-        }
-        if (song.tags && song.tags.art)
-            el("img")
-                .attr({ src: song.tags.art })
-                .clss("icon")
-                .adto(li);
-        el("span")
-            .atxt(
-                song.tags && song.tags.title && song.tags.artist
-                    ? " " + song.tags.artist + " - " + song.tags.title
-                    : " " + song.filename,
-            )
-            .adto(li);
-        el("button")
-            .adto(
-                el("div")
-                    .adto(li)
-                    .clss("itembuttons"),
-            )
-            .atxt("+")
-            .attr({ title: "queue" })
-            .onev("click", e => {
-                e.stopPropagation();
-                queueFinal(song);
-                spawnParticle(e.clientX, e.clientY, "+");
-            });
-        if (song.tags && song.tags.color)
-            li.styl({
-                "--track-foreground": song.tags.color.dark.hex(),
-                "--track-background": song.tags.color.light.hex(),
-            });
-    }
-    if (loadCount > 0)
-        el("li")
-            .adch(createLoadingSpinner())
-            .atxt("Loading " + loadCount + " more songs...");
-    elSonglist.parentNode &&
-        elSonglist.parentNode.replaceChild(newList, elSonglist);
-    elSonglist = newList;
-    lastList = new Date().getTime();
-}
-elSearch.addEventListener("input", listMusic);
 
 async function getDarkLight(imgbuffer: Buffer): Promise<ColorProperty> {
     const vibrant = Vibrant.from(imgbuffer);
@@ -582,13 +744,29 @@ async function getDarkLight(imgbuffer: Buffer): Promise<ColorProperty> {
 
     return { dark, light };
 }
+class Mutex {
+    private mutex = Promise.resolve();
 
+    lock(): PromiseLike<() => void> {
+        let begin: (unlock: () => void) => void = () => {};
+
+        this.mutex = this.mutex.then(() => {
+            return new Promise(begin);
+        });
+
+        return new Promise(res => {
+            begin = res;
+        });
+    }
+}
+
+const readTagsLock = new Mutex();
 async function readTags(filename: string) {
+    const unlock = await readTagsLock.lock();
     const songTags = (await mm.parseFile(filename, {})).common as SongTags;
+    unlock();
     if (songTags.picture && songTags.picture[0]) {
-        songTags.art = `data:${
-            songTags.picture[0].format
-        };base64,${songTags.picture[0].data.toString("base64")}`;
+        songTags.art = `data:${songTags.picture[0].format};base64,${songTags.picture[0].data.toString("base64")}`;
         const artBuffer = songTags.picture[0].data;
 
         songTags.color = await getDarkLight(artBuffer);
@@ -599,222 +777,161 @@ async function readTags(filename: string) {
     return songTags;
 }
 
-async function loadMusic() {
-    for (const song of music) {
-        if (song.tags) {
-            continue;
-        }
-        song.tags = await readTags(song.path);
-        // update in song list
-        listMusic();
-    }
-}
-
 // load music
 
-addMusic(path.join(os.homedir(), "Music"));
-loadMusic();
-playNext();
+musicPlayer.addMusic(path.join(os.homedir(), "Music"));
+musicPlayer.playNext();
 
-elAudio.addEventListener("ended", () => {
-    playNext();
-});
+function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
+    const defer = makeDefer();
 
-elSkip.addEventListener("click", (e /*: MouseEvent*/) => {
-    e.stopPropagation();
-    playNext();
-});
+    const artEl = el("img")
+        .clss("nowplaying_art")
+        .adto(nowPlayingBar)
+        .drmv(defer);
+    const btnPrev = el("button")
+        .clss(".previous.menubtn")
+        .adto(nowPlayingBar)
+        .drmv(defer)
+        .adch(
+            el("span")
+                .atxt("\ue801")
+                .clss(".fonticon.skipback"),
+        );
+    const btnPlaypause = el("button")
+        .clss(".playpause.menubtn")
+        .adto(nowPlayingBar)
+        .drmv(defer)
+        .adch(
+            el("span")
+                .atxt("\ue800")
+                .clss(".fonticon.btnplay"),
+        )
+        .adch(
+            el("span")
+                .atxt("\ue803")
+                .clss(".fonticon.btnpause"),
+        );
+    const btnNext = el("button")
+        .clss(".skip.menubtn")
+        .adto(nowPlayingBar)
+        .drmv(defer)
+        .adch(
+            el("span")
+                .atxt("\ue802")
+                .clss(".fonticon.skipfwd"),
+        );
 
-elPrevious.addEventListener("click", (e /*: MouseEvent*/) => {
-    e.stopPropagation();
-    queueIndex--;
-    updatePlay();
-});
+    const nowPlayingVlist = el("div")
+        .clss("verticallist")
+        .adto(nowPlayingBar)
+        .drmv(defer);
+    const nowPlayingTitle = txt("...").adto(
+        el("div")
+            .clss(".vlitem.nowplaying_title")
+            .adto(nowPlayingVlist),
+    );
+    const nowPlayingArtist = txt("...").adto(
+        el("div")
+            .clss(".vlitem.nowplaying_artist")
+            .adto(nowPlayingVlist),
+    );
+    const nowPlayingFilename = txt("...").adto(
+        el("div")
+            .clss(".vlitem.nowplaying_filename")
+            .adto(nowPlayingVlist),
+    );
+    const elAudio = el("audio")
+        .adto(nowPlayingBar)
+        .drmv(defer);
 
-function playNext() {
-    queueIndex++;
-    updatePlay();
-}
+    const prev = {
+        nowPlaying: undefined as any,
+        nowPlayingTags: undefined as any,
+        nowPlayingUpdated: undefined as any, // incremented on skip fwd eg
+    };
 
-function queueImmediate(song: MusicData) {
-    queueIndex = queue.length;
-    queue.push(song);
-    updatePlay();
-}
+    function updateNowPlayingBar() {
+        const song = data.nowPlaying;
+        nowPlayingTitle.nodeValue = song && song.tags ? song.tags.title || "undefined" : "…";
+        nowPlayingArtist.nodeValue = song && song.tags ? song.tags.artist || "undefined" : "…";
+        nowPlayingFilename.nodeValue = song ? song.filename : "Not Playing";
+        const artsrc = song && song.tags ? song.tags.art || "" : "";
+        if (artEl.src !== artsrc) artEl.src = artsrc;
 
-function queueFinal(song: MusicData) {
-    queue.push(song);
-}
-
-function fillRandom() {
-    const randomMusic = music[Math.floor(Math.random() * music.length)];
-    queue[queueIndex] = randomMusic;
-}
-
-async function updatePlay() {
-    if (queue.length > 1000 && queueIndex > 1) {
-        queue.shift();
-        queueIndex--;
-    }
-
-    while (queueIndex < 0) {
-        queue.unshift(undefined);
-        queueIndex++;
-    }
-
-    let song = queue[queueIndex];
-    if (!song) {
-        fillRandom();
-        song = queue[queueIndex];
-        if (!song) {
-            alert("no music :(");
-            return;
+        if (song && song.tags && song.tags.color) {
+            document.documentElement.style.setProperty("--foreground", song.tags.color.light.hex());
+            document.documentElement.style.setProperty("--background", song.tags.color.dark.hex());
+            document.documentElement.style.setProperty("--background2", "#000");
+        } else {
+            document.documentElement.style.setProperty("--foreground", "#fff");
+            document.documentElement.style.setProperty("--background", "#333");
+            document.documentElement.style.setProperty("--background2", "#000");
         }
     }
 
-    const songTags = song.tags || (await readTags(song.path));
-    if (songTags && !song.tags) song.tags = songTags; // useful for editing
-
-    currentlyPlaying = song.path;
-    listMusic();
-
-    elAudio.src = encodeURI(song.path).replace(/\?/g, "%3F");
-    playpause(true);
-
-    rerenderPlay();
-}
-function rerenderPlay() {
-    const song = queue[queueIndex]!;
-    const songTags = song.tags!;
-
-    const elArt = main.nowPlayingArtElem;
-    const elArtHack = main.nowPlayingArtHackElem;
-    const elTitle = main.nowPlayingTitle;
-    const elArtist = main.nowPlayingArtist;
-    const elLyrics = main.nowPlayingLyrics;
-    const elFilename = main.nowPlayingFilename;
-
-    elFilename.innerText = song.filename;
-
-    console.log(songTags);
-
-    elArt.src = songTags.art;
-    elArtHack.src = songTags.art;
-    elTitle.innerText = "" + songTags.title;
-    elArtist.innerText = "" + songTags.artist;
-
-    function renderLyrics() {
-        const lyricsHL = `${"" + songTags.album}`.split("");
-        let lowercaseLyrics = lyricsHL.join("").toLowerCase();
-        const charsHL = " ".repeat(lyricsHL.length).split("");
-
-        const searchTerm = elSearch.value.toLowerCase();
-        for (const word of searchTerm.split(" ")) {
-            if (!word) continue;
-            while (true) {
-                const foundLoc = lowercaseLyrics.indexOf(word);
-                console.log(foundLoc);
-                if (foundLoc === -1) break;
-                const length = word.length;
-                for (let i = foundLoc; i < foundLoc + length; i++) {
-                    charsHL[i] = "b";
-                }
-                lowercaseLyrics = lowercaseLyrics.replace(
-                    word,
-                    " ".repeat(word.length),
-                );
+    const res = {
+        remove() {
+            defer.cleanup();
+        },
+        update() {
+            if (data.nowPlayingUpdated !== prev.nowPlayingUpdated) {
+                prev.nowPlayingUpdated = data.nowPlayingUpdated;
+                elAudio.src = encodeURI(data.nowPlaying ? data.nowPlaying.path || "" : "").replace(/\?/g, "%3F");
+                elAudio.play();
             }
-        }
+            if (
+                data.nowPlaying !== prev.nowPlaying ||
+                (data.nowPlaying || { tags: undefined }).tags !== prev.nowPlayingTags
+            ) {
+                prev.nowPlaying = data.nowPlaying;
+                prev.nowPlayingTags = (data.nowPlaying || { tags: undefined }).tags;
+                updateNowPlayingBar();
+            }
 
-        const lyricContainerO = document.createDocumentFragment();
-
-        const editButton = el("button")
-            .clss("lyricsedtr-button")
-            .atxt("Edit")
-            .adto(lyricContainerO);
-        const lyricContainer = el("p").adto(lyricContainerO);
-
-        let prevTag = "";
-        let text = "";
-        let commit = () => {};
-
-        charsHL.forEach((tag, i) => {
-            if (lyricsHL[i] === "\n") tag = "newline";
-            if (tag !== prevTag || tag === "newline") {
-                commit();
-                text = "";
-                prevTag = tag;
-                if (tag === " ") {
-                    commit = () => {
-                        const tag = document.createTextNode(text);
-                        lyricContainer.appendChild(tag);
-                    };
-                } else if (tag === "b") {
-                    commit = () => {
-                        const bold = document.createElement("b");
-                        const tag = document.createTextNode(text);
-                        bold.appendChild(tag);
-                        lyricContainer.appendChild(bold);
-                    };
-                } else if (tag === "newline") {
-                    commit = () => {
-                        const br = document.createElement("br");
-                        lyricContainer.appendChild(br);
-                    };
+            if (data.play !== !elAudio.paused) {
+                if (data.play) {
+                    elAudio.play();
                 } else {
-                    console.log("error");
-                    commit = () => {};
+                    elAudio.pause();
                 }
             }
-            text += lyricsHL[i];
-        });
-        commit();
+            if (data.play !== btnPlaypause.classList.contains("play")) {
+                btnPlaypause.classList.toggle("play", data.play);
+            }
+        },
+    };
+    btnPlaypause.onev("click", e => {
+        e.stopPropagation();
+        data.play = !data.play;
+        data.update();
+    });
 
-        editButton.addEventListener("click", () =>
-            showLyricsEditor(song, songTags, () => rerenderPlay()),
-        );
+    elAudio.onev("ended", () => {
+        data.play = true;
+        data.addQueue(1);
+    });
 
-        console.log(lyricContainer);
+    btnNext.addEventListener("click", (e /*: MouseEvent*/) => {
+        e.stopPropagation();
+        data.play = true;
+        data.addQueue(1);
+    });
 
-        elLyrics.innerHTML = "";
-        elLyrics.appendChild(lyricContainerO);
-    }
+    btnPrev.addEventListener("click", (e /*: MouseEvent*/) => {
+        e.stopPropagation();
+        data.play = true;
+        data.addQueue(-1);
+    });
 
-    renderLyrics();
-
-    // let vibrant = Vibrant.from(elArt); // not available in node
-    if (!songTags.color) {
-        return;
-    }
-
-    if (config.lightMode) {
-        document.documentElement.style.setProperty(
-            "--foreground",
-            songTags.color.dark.hex(),
-        );
-        document.documentElement.style.setProperty(
-            "--background",
-            songTags.color.light.hex(),
-        );
-        document.documentElement.style.setProperty("--background2", "#fff");
-    } else {
-        document.documentElement.style.setProperty(
-            "--foreground",
-            songTags.color.light.hex(),
-        );
-        document.documentElement.style.setProperty(
-            "--background",
-            songTags.color.dark.hex(),
-        );
-        document.documentElement.style.setProperty("--background2", "#000");
-    }
+    return res;
 }
 
-function showLyricsEditor(
-    song: MusicData,
-    songtags: SongTags,
-    onclose: () => void,
-) {
+function randomOfArray<T>(array: T[]): T {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => void) {
     const defer = makeDefer();
     defer(() => onclose());
 
@@ -823,10 +940,7 @@ function showLyricsEditor(
         .clss(".lyricsedtr")
         .drmv(defer);
 
-    win.setAttribute(
-        "style",
-        document.documentElement.getAttribute("style") || "",
-    );
+    win.setAttribute("style", document.documentElement.getAttribute("style") || "");
 
     const fylnmehdng = el("h1").adto(win);
 
@@ -904,9 +1018,7 @@ function showLyricsEditor(
         .adto(win)
         .atxt("Title");
 
-    const [defaultArtist, defaultTitle] = song.filename
-        .replace(".mp3", "")
-        .split(" - ");
+    const [defaultArtist, defaultTitle] = song.filename.replace(".mp3", "").split(" - ");
 
     const titlenput = el("input")
         .adto(el("div").adto(win))
@@ -928,18 +1040,12 @@ function showLyricsEditor(
         .adto(win)
         .atxt("Lyrics ");
 
-    let imgset:
-        | { url: string; buffer: Buffer; egname: string; colors: ColorProperty }
-        | undefined;
+    let imgset: { url: string; buffer: Buffer; egname: string; colors: ColorProperty } | undefined;
 
     function setImage(newimg: Buffer, format: string) {
         getDarkLight(newimg)
             .then(res => {
-                const srcval =
-                    "data:image/" +
-                    format +
-                    ";base64," +
-                    newimg.toString("base64");
+                const srcval = "data:image/" + format + ";base64," + newimg.toString("base64");
                 albumArt.src = srcval;
                 win.style.setProperty("--background", res.dark.hex());
                 win.style.setProperty("--foreground", res.light.hex());
@@ -956,13 +1062,10 @@ function showLyricsEditor(
     const lyricsearcharea = el("div").adto(win);
     const lspanel: LyricSearchPanel = lyricSearchPanel(
         lyricsearcharea,
-        artistnput.value.split(" · ")[0] +
-            " - " +
-            titlenput.value.split(" · ")[0],
+        artistnput.value.split(" · ")[0] + " - " + titlenput.value.split(" · ")[0],
         updnfo => {
             txtarya.value = updnfo.lyrics;
-            if (updnfo.image)
-                setImage(updnfo.image.buffer, updnfo.image.format);
+            if (updnfo.image) setImage(updnfo.image.buffer, updnfo.image.format);
             console.log(updnfo);
             txtaryaupd8();
         },
@@ -1042,9 +1145,7 @@ function lyricSearchPanel(
                             fetchLyrics: true,
                         }),
                         (async () => {
-                            return await (
-                                await fetch(result.song_art_image_url)
-                            ).buffer();
+                            return await (await fetch(result.song_art_image_url)).buffer();
                         })().catch(() => undefined),
                     ]);
 
@@ -1054,9 +1155,7 @@ function lyricSearchPanel(
                             ? {
                                   buffer: image,
                                   format: result.song_art_image_url.substr(
-                                      result.song_art_image_url.lastIndexOf(
-                                          ".",
-                                      ) + 1,
+                                      result.song_art_image_url.lastIndexOf(".") + 1,
                                   ),
                               }
                             : undefined,
@@ -1088,10 +1187,7 @@ function lyricSearchPanel(
         searchGoBtn.innerText = "Searching…";
         (async () => {
             const results: string = await new Promise((r, re) =>
-                lyricsClients!.genius.search(
-                    searchTerm.value,
-                    (e: any, v: any) => (e ? re(e) : r(v)),
-                ),
+                lyricsClients!.genius.search(searchTerm.value, (e: any, v: any) => (e ? re(e) : r(v))),
             );
             const prsdreslts: any = JSON.parse(results);
             console.log(prsdreslts);
@@ -1146,8 +1242,7 @@ holder.ondrop = e => {
         return;
     }
     console.log("Adding", e.dataTransfer.files.length, "files.");
-    Array.from(e.dataTransfer.files).forEach(f => addMusic((f as any).path));
-    loadMusic();
+    Array.from(e.dataTransfer.files).forEach(f => musicPlayer.addMusic((f as any).path));
 
     return false;
 };
