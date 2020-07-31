@@ -960,35 +960,21 @@ function showLyricsEditor(
             .catch(e => alert(e.stack));
     }
 
-    let lspanel: LyricSearchPanel | undefined;
-    const lfbtn = el("button")
-        .clss("lyricsedtr-button")
-        .adto(lyrixh2)
-        .atxt("Find Lyrics!");
-    lfbtn.onev("click", () => {
-        if (lspanel) {
-            lspanel.close();
-            lspanel = undefined;
-            lfbtn.textContent = "Find Lyrics!";
-            return;
-        }
-        lfbtn.textContent = "Cancel";
-        lspanel = lyricSearchPanel(
-            lyricsearcharea,
-            artistnput.value.split(" · ")[0] +
-                " - " +
-                titlenput.value.split(" · ")[0],
-            updnfo => {
-                txtarya.value = updnfo.lyrics;
-                if (updnfo.image)
-                    setImage(updnfo.image.buffer, updnfo.image.format);
-                console.log(updnfo);
-                txtaryaupd8();
-            },
-        );
-    });
-
     const lyricsearcharea = el("div").adto(win);
+    const lspanel: LyricSearchPanel = lyricSearchPanel(
+        lyricsearcharea,
+        artistnput.value.split(" · ")[0] +
+            " - " +
+            titlenput.value.split(" · ")[0],
+        updnfo => {
+            txtarya.value = updnfo.lyrics;
+            if (updnfo.image)
+                setImage(updnfo.image.buffer, updnfo.image.format);
+            console.log(updnfo);
+            txtaryaupd8();
+        },
+    );
+    defer(() => lspanel.close());
 
     const txtarya = el("textarea")
         .adto(el("div").adto(win))
