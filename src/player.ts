@@ -190,7 +190,7 @@ button {
 
 // more
 
-#nowplaying_art_hack {
+.fullscreen_bg {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -198,9 +198,15 @@ button {
 	right: 0;
 	width: 100%;
 	height: 100%;
-	filter: blur(40px) brightness(0.5);
 	z-index: -9999;
-	transform: scale(1.5);
+    &.fullscreen_blurred_image {
+    	filter: blur(40px) brightness(0.5);
+    	transform: scale(1.5);
+    }
+    &.fullscreen_overlay {
+        background-color: var(--background);
+        opacity: 0.3;
+    }
 }
 
 body {
@@ -515,8 +521,8 @@ function listMusic() {
                 qdel.span(
                     {},
                     song.tags && song.tags.title && song.tags.artist
-                        ? `${song.tags.title} by ${song.tags.artist}`
-                        : `${song.filename}`,
+                        ? ` ${song.tags.artist} - ${song.tags.title}`
+                        : ` ${song.filename}`,
                 ),
                 qdel.div(
                     { class: "itembuttons" },

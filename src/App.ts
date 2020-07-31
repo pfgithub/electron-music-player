@@ -66,6 +66,7 @@ export class App extends QElement {
     nowPlayingArtist: HTMLDivElement;
     nowPlayingFilename: HTMLDivElement;
     nowPlayingAudio: HTMLAudioElement;
+    npah2: HTMLDivElement;
 
     columnView: HTMLDivElement;
     songListColumn: HTMLDivElement;
@@ -79,9 +80,15 @@ export class App extends QElement {
     constructor() {
         super();
         this.nowPlayingArtHackElem = document.createElement("img");
-        this.nowPlayingArtHackElem.setAttribute("id", "nowplaying_art_hack");
+        this.nowPlayingArtHackElem.classList.add("fullscreen_bg");
+        this.nowPlayingArtHackElem.classList.add("fullscreen_blurred_image");
         this.nowPlayingArtHackElem.src = "...";
         document.body.appendChild(this.nowPlayingArtHackElem);
+        this.npah2 = document.createElement("div");
+        this.npah2.classList.add("fullscreen_bg");
+        this.npah2.classList.add("fullscreen_overlay");
+        document.body.appendChild(this.npah2);
+
         this.node = [
             (this.nowPlayingElem = el.div(
                 { class: "nowplaying", id: "nowplaying" },
