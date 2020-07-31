@@ -991,6 +991,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
                         alert("" + err);
                     } else {
                         if (song.tags) {
+                            song.tags = { ...song.tags };
                             song.tags.album = txtarya.value;
                             song.tags.title = titlenput.value;
                             song.tags.artist = artistnput.value;
