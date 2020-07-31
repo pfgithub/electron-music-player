@@ -688,6 +688,9 @@ async function updatePlay() {
     elAudio.src = song.path;
     playpause(true);
 
+    rerenderPlay(song, songTags);
+}
+function rerenderPlay(song: MusicData, songTags: SongTags) {
     const elArt = main.nowPlayingArtElem;
     const elArtHack = main.nowPlayingArtHackElem;
     const elTitle = main.nowPlayingTitle;
@@ -772,7 +775,9 @@ async function updatePlay() {
         commit();
 
         editButton.addEventListener("click", () =>
-            showLyricsEditor(song!, songTags),
+            showLyricsEditor(song, songTags, () =>
+                rerenderPlay(song, songTags),
+            ),
         );
 
         console.log(lyricContainer);
@@ -811,8 +816,13 @@ async function updatePlay() {
     }
 }
 
-function showLyricsEditor(song: MusicData, songtags: SongTags) {
+function showLyricsEditor(
+    song: MusicData,
+    songtags: SongTags,
+    onclose: () => void,
+) {
     const defer = makeDefer();
+    defer(() => onclose());
 
     const win = el("div")
         .adto(body)
