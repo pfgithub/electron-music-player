@@ -744,7 +744,7 @@ function rerenderPlay(song: MusicData, songTags: SongTags) {
 
         charsHL.forEach((tag, i) => {
             if (lyricsHL[i] === "\n") tag = "newline";
-            if (tag !== prevTag) {
+            if (tag !== prevTag || tag === "newline") {
                 commit();
                 text = "";
                 prevTag = tag;
