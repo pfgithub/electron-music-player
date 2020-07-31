@@ -9,17 +9,19 @@
 
 A simple music player in electron
 
-![screenshot](https://i.imgur.com/ptGmrTa.png)
+![screenshot](.github/demo-2020-07-30.png)
+
+![screenshot](.github/demo-edit-2020-07-30.png)
 
 Colors are set dynamically based on the 0th art of the song that is playing,
 enforcing a contrast ratio of at least 3:1
 
 Drag a folder or a set of files to play them
 
-Lyrics are currently read from the Album field of the audio file. (For use with
-[mp3lyrics](https://github.com/pfgithub/mp3lyrics))
+Lyrics are currently read from/saved to the Album field of the audio file.
 
-Supports Linux and Mac. Might support Windows if you're lucky.
+Supports Linux. Might support Mac and Windows if you're lucky and you have a
+folder that you can write to called `/tmp`.
 
 ## Features
 
