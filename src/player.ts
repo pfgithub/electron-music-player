@@ -686,7 +686,7 @@ async function updatePlay() {
     }
 
     const songTags = song.tags || (await readTags(song.path));
-    if (songTags && !song.tags) song.tags == songTags; // useful for editing
+    if (songTags && !song.tags) song.tags = songTags; // useful for editing
 
     currentlyPlaying = song.path;
     listMusic();
@@ -694,9 +694,12 @@ async function updatePlay() {
     elAudio.src = encodeURI(song.path).replace(/\?/g, "%3F");
     playpause(true);
 
-    rerenderPlay(song, songTags);
+    rerenderPlay();
 }
-function rerenderPlay(song: MusicData, songTags: SongTags) {
+function rerenderPlay() {
+    const song = queue[queueIndex]!;
+    const songTags = song.tags!;
+    
     const elArt = main.nowPlayingArtElem;
     const elArtHack = main.nowPlayingArtHackElem;
     const elTitle = main.nowPlayingTitle;
@@ -782,7 +785,7 @@ function rerenderPlay(song: MusicData, songTags: SongTags) {
 
         editButton.addEventListener("click", () =>
             showLyricsEditor(song, songTags, () =>
-                rerenderPlay(song, songTags),
+                rerenderPlay(),
             ),
         );
 
@@ -936,7 +939,7 @@ function showLyricsEditor(
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = songtags.artist || defaultArtist));
 
-    const lyrixh2 = el("h2")
+    el("h2")
         .adto(win)
         .atxt("Lyrics ");
 
