@@ -298,7 +298,7 @@ textarea.lyricsedtr-input {
     border-radius: 5px;
     transition: 0.1s box-shadow;
     resize: vertical;
-    &:hover {
+    &:not(:disabled):hover {
         box-shadow: inset 0 0 50px -30px var(--background);
     }
     &:focus {
@@ -314,6 +314,9 @@ textarea.lyricsedtr-input {
         margin: 0;
     }
 }
+:disabled {
+    opacity: 0.5;
+}
 .lyricsedtr-button {
     background-color: var(--foreground);
     padding: 5px;
@@ -325,7 +328,7 @@ textarea.lyricsedtr-input {
     border-radius: 5px;
     transition: 0.1s box-shadow;
     vertical-align: middle;
-    &:hover {
+    &:not(:disabled):hover {
         box-shadow: 0 0 10px 0 var(--foreground);
         cursor: pointer; /* too bad */
     }
@@ -333,7 +336,7 @@ textarea.lyricsedtr-input {
         background-color: var(--background);
         color: var(--foreground);
         box-shadow: none;
-        &:hover {
+        &:not(:disabled):hover {
             box-shadow: 0 0 10px -3px var(--foreground);
         }
     }
