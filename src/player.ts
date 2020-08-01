@@ -557,6 +557,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
         lyricsEditorVisible = true;
         showLyricsEditor(data.nowPlaying, data.nowPlaying.tags, () => {
             lyricsEditorVisible = false;
+            data.musicUpdated += 1; // in case of save
             data.update();
         });
     });
@@ -632,14 +633,13 @@ function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneList
         },
         update() {
             // only do the filter if song or data.filter is changed
-            const visible = playlistFilter(song, data.filter);
+            const playing = data.nowPlaying === song;
+            const visible = playlistFilter(song, data.filter) || playing;
 
             if (visible !== prevData.visible) {
                 li.classList.toggle("playlist_hide", !visible);
                 if (!visible) return;
             }
-
-            const playing = data.nowPlaying === song;
 
             if (playing !== prevData.playing) {
                 prevData.playing = playing;
