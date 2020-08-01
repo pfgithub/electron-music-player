@@ -60,6 +60,7 @@
         "node-fetch": "^2.6.0",
         "node-genius": "^1.1.0",
         "node-vibrant": "^3.2.0-alpha",
+        "uhtml": "^2.0.1",
         "uuid": "^3.3.2"
     }
 }

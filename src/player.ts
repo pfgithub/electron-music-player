@@ -20,9 +20,17 @@ import * as mm from "music-metadata";
 import * as Vibrant from "node-vibrant";
 //@ts-ignore
 import * as ffmetadata_ from "ffmetadata";
+//@ts-ignore
+import * as uhtml from "uhtml";
 import fetch from "node-fetch";
 const Lyricist = (window as any)["require"]("lyricist");
 const Genius = (window as any)["require"]("node-genius");
+
+type UserHyper = Hyper | string | ((e: InputEvent) => void) | Hyper[];
+type Hyper = { __is_hyper: true };
+const render = uhtml.render as (mount: HTMLElement, hyper: Hyper) => void;
+const html = uhtml.html as (a: TemplateStringsArray, ...b: UserHyper[]) => Hyper;
+const svg = uhtml.svg as (a: TemplateStringsArray, ...b: UserHyper[]) => Hyper;
 
 let lyricsClients: { genius: any; lyricist: any } | undefined;
 try {
@@ -1381,21 +1389,37 @@ function songAddPanel(data: Data, onclose: () => void) {
         .adto(body)
         .drmv(defer);
 
-    el("h1")
-        .adto(mainel)
-        .atxt("Add Songs");
+    const close = () => {
+        defer.cleanup();
+        onclose();
+    };
 
-    const btnlst = el("div")
-        .clss(".hlist")
-        .adto(mainel);
-    el("button")
-        .adto(btnlst)
-        .clss(".lyricsedtr-button")
-        .atxt("Done")
-        .onev("click", () => {
-            defer.cleanup();
-            onclose();
-        });
+    const list: string[] = [];
+
+    const additm = () => {
+        list.push("Hi!");
+        rerender();
+    };
+    // prettier-ignore
+    const rndr = () => html`
+        <h1>Add Songs</h1>
+        <div class="hlist">
+            <button class="lyricsedtr-button" onclick=${close}>Done</button>
+        </div>
+        <div class="hlist">
+            <button class="lyricsedtr-button" onclick=${additm}>+ Add</button>
+        </div>
+        ${list.map((it, i) => html`
+            <div>
+                <input type="text" class="lyricsedtr-input" value="${it}" oninput=${e => list[i] = (e.currentTarget as any).value} />
+            </div>
+        `)}
+    `;
+    const rerender = () => {
+        render(mainel, rndr());
+    };
+
+    rerender();
 
     // - list of songAddItems
     // - filename field
