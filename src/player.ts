@@ -734,7 +734,8 @@ const savedregex = { regex: new RegExp(""), text: "" };
 const playlistFilter = (song: MusicData, filterStr: string) => {
     let searchdata = song.filename;
     if (song.tags) {
-        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.album}`;
+        const hasArt = song.tags.picture && song.tags.picture[0];
+        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.album} ${hasArt ? "__HAS_ART" : "__NO_ART"}`;
     }
 
     const searchValue = filterStr;
@@ -1038,7 +1039,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
                             if (imgset) {
                                 song.tags.art = imgset.url;
                                 song.tags.color = imgset.colors;
-                                song.tags.picture = undefined;
+                                song.tags.picture = [{format: "image/"+imgset.fmt, data: imgset.buffer}];
                             }
                         }
                         defer.cleanup();
@@ -1081,7 +1082,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         .adto(win)
         .atxt("Lyrics ");
 
-    let imgset: { url: string; buffer: Buffer; egname: string; colors: ColorProperty } | undefined;
+    let imgset: { url: string; buffer: Buffer; egname: string; colors: ColorProperty; fmt: string } | undefined;
 
     function setImage(newimg: Buffer, format: string) {
         getDarkLight(newimg)
@@ -1094,6 +1095,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
                     url: srcval,
                     buffer: newimg,
                     egname: "__TEMPIMAGE." + format,
+                    fmt: format,
                     colors: res,
                 };
             })
