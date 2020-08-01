@@ -1,8 +1,5 @@
 import { $scss } from "./qdom";
-import { hack } from "./App";
 import "./_stdlib";
-
-hack();
 
 const config = {
     minContrast: 5.0,
@@ -59,9 +56,46 @@ $scss`
 	--background: #000;
 	--background2: #000;
 }
+
+@font-face {
+    font-family: 'buttons';
+    src: url('font/buttons.eot');
+    src: url('font/buttons.eot') format('embedded-opentype'),
+       url('font/buttons.woff2') format('woff2'),
+       url('font/buttons.woff') format('woff'),
+       url('font/buttons.ttf') format('truetype'),
+       url('font/buttons.svg') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+.fonticon {
+    font-family: "buttons";
+}
+.menubtn{
+	font-size: 1.2em;
+	color: var(--foreground);
+	width: 60px;
+	height: 60px;
+	padding: 0;
+	margin: 0;
+}
+.nowplaying {
+    background: var(--background);
+    border-radius: 0 0 10px 10px;
+    position: sticky;
+    top: 0;
+    display: grid;
+    grid-template-columns: max-content max-content max-content max-content max-content;
+    -webkit-app-region: drag;
+    & > * {
+    	-webkit-app-region: no-drag;
+    }
+}
+
 .verticallist {
 	display: flex;
 	flex-flow: column;
+    user-select: text;
 }
 .vlitem {
 }
@@ -82,6 +116,18 @@ $scss`
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+.vgrid {
+    display: grid;
+    gap: 10px;
+    grid-auto-rows: max-content;
+}
+.hgrid {
+    display: grid;
+    gap: 10px;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+}
+ul, p, h1, h2 {margin: 0;}
 
 @media screen and (max-width: 600px) {
 	.columns {
@@ -276,16 +322,12 @@ li:hover .itembuttons {
     width: 80px;
     height: 80px;
     margin-right: 10px;
-    margin-bottom: 10px;
     vertical-align: middle;
     border-radius: 10px;
     border: 3px solid var(--foreground);
 }
 textarea.lyricsedtr-input {
     padding: 10px;
-}
-.lyricsedtr-searchresults {
-    margin-bottom: 10px;
 }
 .lyricsedtr-input {
     width: 100%;
@@ -308,23 +350,19 @@ textarea.lyricsedtr-input {
 .lyricsedtr-hbox {
     display: grid;
     gap: 10px;
-    margin-bottom: 10px;
     grid-template-columns: 1fr max-content;
-    & > button {
-        margin: 0;
-    }
 }
 :disabled {
     opacity: 0.5;
 }
 .lyricsedtr-button {
     background-color: var(--foreground);
+    margin: 0;
     padding: 5px;
     padding-left: 10px;
     padding-right: 10px;
     color: var(--background);
     box-shadow: 0 1px 10px -3px var(--foreground);
-    margin-right: 10px;
     border-radius: 5px;
     transition: 0.1s box-shadow;
     vertical-align: middle;
@@ -332,8 +370,8 @@ textarea.lyricsedtr-input {
         box-shadow: 0 0 10px 0 var(--foreground);
         cursor: pointer; /* too bad */
     }
-    &.lyricsedtr-button-cancel {
-        background-color: var(--background);
+    &.unimportant {
+        background-color: transparent;
         color: var(--foreground);
         box-shadow: none;
         &:not(:disabled):hover {
@@ -406,14 +444,19 @@ function MusicPlayer(mount: HTMLElement) {
         .adto(mount)
         .drmv(defer);
     const songlistcol = el("div")
-        .clss("column")
+        .clss(".column.vgrid")
         .adto(cols);
     const songlistsearch = el("input")
         .clss(".search.lyricsedtr-input")
         .adto(songlistcol)
         .attr({ type: "text", placeholder: "Search..." });
+    const songlistbuttonrow = el("div").adto(songlistcol);
+    const songlistaddbtn = el("button")
+        .clss(".lyricsedtr-button.unimportant")
+        .adto(songlistbuttonrow)
+        .atxt("Add");
     const songlyricscol = el("div")
-        .clss("column")
+        .clss(".column.vgrid")
         .adto(cols);
 
     const queue: (MusicData | undefined)[] = [];
@@ -504,6 +547,15 @@ function MusicPlayer(mount: HTMLElement) {
 
     data.update();
 
+    let addPanelVisible = false;
+    songlistaddbtn.onev("click", () => {
+        if (addPanelVisible) return;
+        addPanelVisible = true;
+        songAddPanel(data, () => {
+            addPanelVisible = false;
+        });
+    });
+
     songlistsearch.onev("input", () => {
         data.filter = songlistsearch.value;
         data.update();
@@ -531,14 +583,14 @@ type Data = {
 function lyricViewElem(parent: HTMLElement, data: Data) {
     const defer = makeDefer();
     const nowPlayingLyrics = el("div")
-        .clss("nowplaying_lyrics")
+        .clss(".nowplaying_lyrics.vgrid")
         .adto(parent)
         .drmv(defer);
 
     const editButton = el("button")
         .clss("lyricsedtr-button")
         .atxt("…")
-        .adto(nowPlayingLyrics);
+        .adto(el("div").adto(nowPlayingLyrics));
     const lyricContainer = txt("…").adto(
         el("p")
             .clss("lyrics")
@@ -862,24 +914,24 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
                 .clss(".fonticon.skipfwd"),
         );
 
-    const nowPlayingVlist = el("div")
+    const nowPlayingvgrid = el("div")
         .clss("verticallist")
         .adto(nowPlayingBar)
         .drmv(defer);
     const nowPlayingTitle = txt("...").adto(
         el("div")
             .clss(".vlitem.nowplaying_title")
-            .adto(nowPlayingVlist),
+            .adto(nowPlayingvgrid),
     );
     const nowPlayingArtist = txt("...").adto(
         el("div")
             .clss(".vlitem.nowplaying_artist")
-            .adto(nowPlayingVlist),
+            .adto(nowPlayingvgrid),
     );
     const nowPlayingFilename = txt("...").adto(
         el("div")
             .clss(".vlitem.nowplaying_filename")
-            .adto(nowPlayingVlist),
+            .adto(nowPlayingvgrid),
     );
     const elAudio = el("audio")
         .adto(nowPlayingBar)
@@ -977,7 +1029,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
 
     const win = el("div")
         .adto(body)
-        .clss(".lyricsedtr")
+        .clss(".lyricsedtr.vgrid")
         .drmv(defer);
 
     win.setAttribute("style", document.documentElement.getAttribute("style") || "");
@@ -1000,8 +1052,12 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         arturlfetchbtn.disabled = !v;
     };
 
+    const btnrow = el("div")
+        .clss(".hgrid")
+        .adto(win);
+
     const btnsave = el("button")
-        .adto(win)
+        .adto(btnrow)
         .atxt("Save")
         .clss("lyricsedtr-button")
         .onev("click", () => {
@@ -1055,41 +1111,45 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         });
 
     const btncancel = el("button")
-        .adto(win)
+        .adto(btnrow)
         .atxt("Cancel")
-        .clss("lyricsedtr-button.lyricsedtr-button-cancel")
+        .clss("lyricsedtr-button.unimportant")
         .onev("click", () => {
             defer.cleanup();
         });
 
+    const titlegroup = el("div").adto(win);
     el("h2")
-        .adto(win)
+        .adto(titlegroup)
         .atxt("Title");
 
     const [defaultArtist, defaultTitle] = song.filename.replace(".mp3", "").split(" - ");
 
     const titlenput = el("input")
-        .adto(el("div").adto(win))
+        .adto(el("div").adto(titlegroup))
         .attr({ placeholder: "Title..." })
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = songtags.title || defaultTitle));
 
+    const authorgroup = el("div").adto(win);
+
     el("h2")
-        .adto(win)
+        .adto(authorgroup)
         .atxt("Author");
 
     const artistnput = el("input")
-        .adto(el("div").adto(win))
+        .adto(el("div").adto(authorgroup))
         .attr({ placeholder: "Author..." })
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = songtags.artist || defaultArtist));
 
+    const artgroup = el("div").adto(win);
     el("h2")
-        .adto(win)
+        .adto(artgroup)
         .atxt("Art");
 
     const arturlbox = el("div")
-        .adto(win)
+        .adto(artgroup)
         .clss("lyricsedtr-hbox");
     const arturlinput = el("input")
         .adto(arturlbox)
@@ -1127,8 +1187,9 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             });
     }
 
+    const lyrixgrup = el("div").adto(win);
     el("h2")
-        .adto(win)
+        .adto(lyrixgrup)
         .atxt("Lyrics");
 
     let imgset: { url: string; buffer: Buffer; egname: string; colors: ColorProperty; fmt: string } | undefined;
@@ -1151,7 +1212,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             .catch(e => alert(e.stack));
     }
 
-    const lyricsearcharea = el("div").adto(win);
+    const lyricsearcharea = el("div").adto(lyrixgrup);
     const lspanel: LyricSearchPanel = lyricSearchPanel(
         lyricsearcharea,
         titlenput.value.split(" · ")[0] + " by " + artistnput.value.split(" · ")[0],
@@ -1195,6 +1256,7 @@ function lyricSearchPanel(
     }
 
     const page = el("div")
+        .clss("vgrid")
         .adto(mount)
         .drmv(defer);
 
@@ -1209,7 +1271,7 @@ function lyricSearchPanel(
         .atxt("Search!")
         .adto(searchBox)
         .clss("lyricsedtr-button");
-    const resultsArea = el("li")
+    const resultsArea = el("ul")
         .clss("lyricsedtr-searchresults")
         .adto(page);
 
@@ -1310,6 +1372,41 @@ type GeniusSong = {
         id: number;
     };
 };
+
+function songAddPanel(data: Data, onclose: () => void) {
+    const defer = makeDefer();
+
+    const mainel = el("div")
+        .clss(".lyricsedtr.vgrid") // TODO rename
+        .adto(body)
+        .drmv(defer);
+
+    el("h1")
+        .adto(mainel)
+        .atxt("Add Songs");
+
+    const btnlst = el("div")
+        .clss(".hlist")
+        .adto(mainel);
+    el("button")
+        .adto(btnlst)
+        .clss(".lyricsedtr-button")
+        .atxt("Done")
+        .onev("click", () => {
+            defer.cleanup();
+            onclose();
+        });
+
+    // - list of songAddItems
+    // - filename field
+    // - youtube link field
+    // - 2x checkbox
+    // - go button (disables everything else)
+
+    const res = {
+        render() {},
+    };
+}
 
 const holder = document;
 
