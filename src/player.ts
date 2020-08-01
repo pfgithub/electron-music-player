@@ -88,7 +88,9 @@ $scss`
         grid-template-columns: 1fr;
 	}
 }
-
+.playlist_hide {
+    display: none;
+}
 .nowplaying_art {
 	width: 60px;
 	height: 60px;
@@ -341,7 +343,7 @@ textarea.lyricsedtr-input {
 }
 `;
 
-let lastList = 0;
+const lastList = 0;
 let llTimeout: NodeJS.Timeout;
 
 function spawnParticle(x: number, y: number, text: string) {
@@ -437,6 +439,7 @@ function MusicPlayer(mount: HTMLElement) {
 
         queueImmediate(song: MusicData) {
             queue.push(song);
+            data.play = true;
             setQueueIndex(queue.length - 1);
         },
         queueFinal(song: MusicData) {
@@ -587,22 +590,115 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
     return res;
 }
 
+function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneListItem {
+    const defer = makeDefer();
+
+    const li = el("li")
+        .attr({ role: "button", tabindex: "0" })
+        .onev("click", e => {
+            e.stopPropagation();
+            data.queueImmediate(song);
+        })
+        .adto(ul);
+
+    const img = el("img")
+        .clss("icon")
+        .adto(li);
+    const title = txt("").adto(el("span").adto(li));
+
+    el("button")
+        .adto(
+            el("div")
+                .adto(li)
+                .clss("itembuttons"),
+        )
+        .atxt("+")
+        .attr({ title: "queue" })
+        .onev("click", e => {
+            e.stopPropagation();
+            data.queueFinal(song);
+            spawnParticle(e.clientX, e.clientY, "+");
+        });
+
+    const prevData = {
+        playing: Symbol() as any,
+        visible: Symbol() as any,
+        tags: Symbol() as any,
+    };
+
+    const res: OneListItem = {
+        remove() {
+            defer.cleanup();
+        },
+        update() {
+            // only do the filter if song or data.filter is changed
+            const visible = playlistFilter(song, data.filter);
+
+            if (visible !== prevData.visible) {
+                li.classList.toggle("playlist_hide", !visible);
+                if (!visible) return;
+            }
+
+            const playing = data.nowPlaying === song;
+
+            if (playing !== prevData.playing) {
+                prevData.playing = playing;
+                li.attr({ "aria-pressed": "" + playing });
+                li.classList.toggle("playing", playing);
+            }
+
+            if (song.tags !== prevData.tags) {
+                prevData.tags = song.tags;
+
+                const imgsrc = song.tags ? song.tags.art || "" : "";
+                if (img.src !== imgsrc) img.src = imgsrc;
+
+                const newtxt =
+                    song.tags && song.tags.title && song.tags.artist
+                        ? " " + song.tags.artist + " - " + song.tags.title
+                        : " " + song.filename;
+                if (title.nodeValue !== newtxt) title.nodeValue = newtxt;
+
+                if (song.tags && song.tags.color) {
+                    li.styl({
+                        "--track-foreground": song.tags.color.dark.hex(),
+                        "--track-background": song.tags.color.light.hex(),
+                    });
+                } else {
+                    li.styl({ "--track-foreground": "#fff", "--track-background": "#000" });
+                }
+            }
+        },
+    };
+    return res;
+}
+
+type OneListItem = {
+    remove(): void;
+    update(): void;
+};
+
 function listMusicElem(parent: HTMLElement, data: Data) {
     const prevData = {
-        filter: undefined as any,
-        musicUpdated: undefined as any,
-        currentlyPlaying: undefined as any,
+        filter: Symbol() as any,
+        musicUpdated: Symbol() as any,
+        currentlyPlaying: Symbol() as any,
     };
 
     const defer = makeDefer();
-    let songlistul = el("ul")
+    const songlistul = el("ul")
         .adto(parent)
-        .clss("songlist");
+        .clss("songlist")
+        .drmv(defer);
+
+    const lis: { sng: MusicData; oli: OneListItem }[] = []; // atm there is no way to remove things so this is fine for now
 
     const res = {
         remove() {
+            for (const itm of lis) {
+                itm.oli.remove();
+            }
             defer.cleanup();
-            songlistul.remove();
         },
         update() {
             if (
@@ -616,72 +712,16 @@ function listMusicElem(parent: HTMLElement, data: Data) {
             prevData.musicUpdated = data.musicUpdated;
             prevData.currentlyPlaying = data.nowPlaying;
 
-            if (new Date().getTime() - config.updateSpeedLimit < lastList) {
-                llTimeout && clearTimeout(llTimeout);
-                llTimeout = setTimeout(() => res.update(), config.updateSpeedLimit);
-                return;
-            }
-            let loadCount = 0;
-            const newList = el("ul").clss("songlist");
-            for (const song of data.music) {
-                if (!playlistFilter(song, data.filter)) {
-                    continue;
+            for (const [i, song] of data.music.entries()) {
+                if (!lis[i]) {
+                    lis[i] = { sng: song, oli: oneListItem(songlistul, data, song) };
                 }
-                const playing = data.nowPlaying === song;
-                const li = el("li")
-                    .attr({
-                        role: "button",
-                        "aria-pressed": "" + playing,
-                        tabindex: "0",
-                    })
-                    .clss(playing ? "playing" : "")
-                    .onev("click", e => {
-                        e.stopPropagation();
-                        data.queueImmediate(song);
-                    })
-                    .adto(newList);
-                if (!song.tags) {
-                    loadCount++;
-                    createLoadingSpinner().adto(li);
+                if (lis[i].sng !== song) {
+                    throw new Error("bad state. song list is not supposed to have items removed.");
+                    // todo key based thing instead (song.path doesn't work so maybe a unique id / a set if that can do it)
                 }
-                if (song.tags && song.tags.art)
-                    el("img")
-                        .attr({ src: song.tags.art })
-                        .clss("icon")
-                        .adto(li);
-                el("span")
-                    .atxt(
-                        song.tags && song.tags.title && song.tags.artist
-                            ? " " + song.tags.artist + " - " + song.tags.title
-                            : " " + song.filename,
-                    )
-                    .adto(li);
-                el("button")
-                    .adto(
-                        el("div")
-                            .adto(li)
-                            .clss("itembuttons"),
-                    )
-                    .atxt("+")
-                    .attr({ title: "queue" })
-                    .onev("click", e => {
-                        e.stopPropagation();
-                        data.queueFinal(song);
-                        spawnParticle(e.clientX, e.clientY, "+");
-                    });
-                if (song.tags && song.tags.color)
-                    li.styl({
-                        "--track-foreground": song.tags.color.dark.hex(),
-                        "--track-background": song.tags.color.light.hex(),
-                    });
+                lis[i].oli.update();
             }
-            if (loadCount > 0)
-                el("li")
-                    .adch(createLoadingSpinner())
-                    .atxt("Loading " + loadCount + " more songs...");
-            songlistul.remove();
-            songlistul = newList.adto(parent);
-            lastList = new Date().getTime();
         },
     };
     return res;
