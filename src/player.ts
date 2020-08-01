@@ -94,7 +94,6 @@ $scss`
 .nowplaying_art {
 	width: 60px;
 	height: 60px;
-    border-radius: 5px;
 }
 .icon {
 	width: 20px;
