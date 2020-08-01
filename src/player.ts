@@ -812,7 +812,7 @@ const playlistFilter = (song: MusicData, filterStr: string) => {
             savedregex.text = searchValue;
             savedregex.regex = new RegExp(searchValue.substr(1));
         }
-        return savedregex.regex.exec(searchValue) != null;
+        return savedregex.regex.exec(searchdata) != null;
     }
 
     searchdata = searchdata.toLowerCase();
