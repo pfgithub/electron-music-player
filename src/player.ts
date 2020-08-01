@@ -94,6 +94,7 @@ $scss`
 .nowplaying_art {
 	width: 60px;
 	height: 60px;
+    border-radius: 5px;
 }
 .icon {
 	width: 20px;
@@ -634,7 +635,7 @@ function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneList
         update() {
             // only do the filter if song or data.filter is changed
             const playing = data.nowPlaying === song;
-            const visible = playlistFilter(song, data.filter) || playing;
+            const visible = playlistFilter(song, data.filter);
 
             if (visible !== prevData.visible) {
                 li.classList.toggle("playlist_hide", !visible);
@@ -735,7 +736,9 @@ const playlistFilter = (song: MusicData, filterStr: string) => {
     let searchdata = song.filename;
     if (song.tags) {
         const hasArt = song.tags.picture && song.tags.picture[0];
-        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.album} ${hasArt ? "__HAS_ART" : "__NO_ART"}`;
+        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.album} ${
+            hasArt ? "__HAS_ART" : "__NO_ART"
+        }`;
     }
 
     const searchValue = filterStr;
@@ -992,6 +995,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         txtarya.disabled = !v;
         titlenput.disabled = !v;
         artistnput.disabled = !v;
+        arturlfetchbtn.disabled = !v;
     };
 
     const btnsave = el("button")
@@ -1039,7 +1043,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
                             if (imgset) {
                                 song.tags.art = imgset.url;
                                 song.tags.color = imgset.colors;
-                                song.tags.picture = [{format: "image/"+imgset.fmt, data: imgset.buffer}];
+                                song.tags.picture = [{ format: "image/" + imgset.fmt, data: imgset.buffer }];
                             }
                         }
                         defer.cleanup();
@@ -1080,7 +1084,50 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
 
     el("h2")
         .adto(win)
-        .atxt("Lyrics ");
+        .atxt("Art");
+
+    const arturlbox = el("div")
+        .adto(win)
+        .clss("lyricsedtr-hbox");
+    const arturlinput = el("input")
+        .adto(arturlbox)
+        .attr({ placeholder: "URL..." })
+        .clss("lyricsedtr-input");
+    const arturlfetchbtn = el("button")
+        .adto(arturlbox)
+        .atxt("Fetch")
+        .onev("click", () => arturlfetch())
+        .clss("lyricsedtr-button");
+
+    function updateFetchBtn(on: boolean) {
+        arturlfetchbtn.disabled = !on;
+        arturlfetchbtn.textContent = on ? "Fetch" : "Fetching…";
+    }
+
+    function arturlfetch() {
+        updateFetchBtn(false);
+        const urlv = arturlinput.value;
+        fetch(urlv)
+            .then(fs1 => {
+                fs1.buffer()
+                    .then(fs2 => {
+                        setImage(fs2, urlv.substr(urlv.lastIndexOf(".") + 1));
+                        updateFetchBtn(true);
+                    })
+                    .catch(e => {
+                        alert(e.stack);
+                        updateFetchBtn(false);
+                    });
+            })
+            .catch(e => {
+                alert(e.stack);
+                updateFetchBtn(false);
+            });
+    }
+
+    el("h2")
+        .adto(win)
+        .atxt("Lyrics");
 
     let imgset: { url: string; buffer: Buffer; egname: string; colors: ColorProperty; fmt: string } | undefined;
 
@@ -1105,7 +1152,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
     const lyricsearcharea = el("div").adto(win);
     const lspanel: LyricSearchPanel = lyricSearchPanel(
         lyricsearcharea,
-        artistnput.value.split(" · ")[0] + " - " + titlenput.value.split(" · ")[0],
+        titlenput.value.split(" · ")[0] + " by " + artistnput.value.split(" · ")[0],
         updnfo => {
             txtarya.value = updnfo.lyrics;
             if (updnfo.image) setImage(updnfo.image.buffer, updnfo.image.format);
