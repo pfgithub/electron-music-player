@@ -1223,7 +1223,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
     const lyricsearcharea = el("div").adto(lyrixgrup);
     const lspanel: LyricSearchPanel = lyricSearchPanel(
         lyricsearcharea,
-        titlenput.value.split(" · ")[0] + " by " + artistnput.value.split(" · ")[0],
+        artistnput.value.split(" · ")[0] + " - " + titlenput.value.split(" · ")[0],
         updnfo => {
             txtarya.value = updnfo.lyrics;
             if (updnfo.image) setImage(updnfo.image.buffer, updnfo.image.format);
