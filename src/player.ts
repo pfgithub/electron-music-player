@@ -319,6 +319,7 @@ li:hover .itembuttons {
     z-index: 20;
     background-color: var(--background);
     color: var(--foreground);
+    transform: translate3d(0, 0, 0); /*hack to increase performance significantly*/
     & h1, & h2 {
     	user-select: text;
     }
