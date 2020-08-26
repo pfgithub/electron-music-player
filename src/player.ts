@@ -20,17 +20,15 @@ import * as mm from "music-metadata";
 import * as Vibrant from "node-vibrant";
 //@ts-ignore
 import * as ffmetadata_ from "ffmetadata";
-//@ts-ignore
+import * as child_process from "child_process";
 import * as uhtml from "uhtml";
 import fetch from "node-fetch";
 const Lyricist = (window as any)["require"]("lyricist");
 const Genius = (window as any)["require"]("node-genius");
 
-type UserHyper = Hyper | string | ((e: InputEvent) => void) | Hyper[];
-type Hyper = { __is_hyper: true };
-const render = uhtml.render as (mount: HTMLElement, hyper: Hyper) => void;
-const html = uhtml.html as (a: TemplateStringsArray, ...b: UserHyper[]) => Hyper;
-const svg = uhtml.svg as (a: TemplateStringsArray, ...b: UserHyper[]) => Hyper;
+const render = uhtml.render;
+const html = uhtml.html;
+const svg = uhtml.svg;
 
 let lyricsClients: { genius: any; lyricist: any } | undefined;
 try {
@@ -1382,7 +1380,20 @@ type GeniusSong = {
     };
 };
 
-function songAddPanel(data: Data, onclose: () => void) {
+function assertNever(a: never): never {
+    throw new Error("never: "+a);
+}
+
+function joinBetween<T, U>(a: T[], v: U): (T | U)[] {
+    const res: (T | U)[] = [];
+    a.forEach((item, i) => {
+        if(i !== 0) res.push(v);
+        res.push(item);
+    })
+    return res;
+}
+
+function songAddPanel(outerData: Data, onclose: () => void) {
     const defer = makeDefer();
 
     const mainel = el("div")
@@ -1394,28 +1405,174 @@ function songAddPanel(data: Data, onclose: () => void) {
         defer.cleanup();
         onclose();
     };
-
-    const list: string[] = [];
-
-    const additm = () => {
-        list.push("Hi!");
+    
+    type TabName = "youtube" | "file";
+    type ExecData = string[];
+    const setTab = (tabName: TabName) => {
+        data.from.active = tabName;
         rerender();
+    }
+    const data = {
+        from: {
+            active: "youtube" as TabName,
+            youtube: {videoid: ""},
+            file: {filepath: ""},
+        },
+        tempo: "2.0",
+        title: "",
+        executing: false as false | ExecData,
+        allowCloseExecuting: false,
     };
+    
+    async function execRun() {
+        const execarr: string[] = [];
+        data.executing = execarr;
+        data.allowCloseExecuting = false;
+        rerender();
+        
+        const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "musicplayer-"));
+        console.log(tmpdir);
+        
+        async function cleanup() {
+            // console.log("note: {recursive: true} is only available past node v12.10.0", process.versions.node);
+            // await fs.promises.rmdir(tmpdir, {recursive: true});
+            child_process.spawnSync("rm", ["-rf", tmpdir]);
+        }
+        
+        const cmds = getcmds();
+        for(const [pnme, ...args] of cmds) {
+            execarr.push([pnme, ...args].join(" "));
+            rerender();
+            const spawned = child_process.spawn(pnme, args, {cwd: tmpdir});
+            function addText(stdv: string, txtv: string) {
+                if(txtv.startsWith("\r")) {
+                    execarr.pop();
+                }
+                execarr.push(stdv+": "+txtv);
+            }
+            spawned.stdout.on("data", rv => {
+                const txtstr = rv.toString() as string;
+                txtstr.split("\n").forEach(itm => addText("stdout", itm));
+                rerender();
+            });
+            spawned.stderr.on("data", rv => {
+                const txtstr = rv.toString() as string;
+                txtstr.split("\n").forEach(itm => addText("stderr", itm));
+                rerender();
+            });
+            const rescode = await new Promise(r => {spawned.addListener("close", (code) => {
+                r(code);
+            })});
+            if(rescode !== 0) {
+                execarr.push("Command failed with error code "+rescode);
+                
+                execarr.push("Removing intermediates...");
+                rerender();
+                await cleanup();
+                
+                execarr.push("Failed");
+                data.allowCloseExecuting = true;
+                rerender();
+                
+                return;
+            }
+        }
+        
+        execarr.push("Removing intermediates...");
+        rerender();
+        await cleanup();
+        
+        execarr.push("Done");
+        rerender();
+        
+        outerData.addMusic(getDistPath());
+        defer.cleanup();
+        onclose();
+    }
+    
+    function exec() {
+        if(data.executing && !data.allowCloseExecuting) return;
+        execRun().catch((e) => {
+            data.allowCloseExecuting = true;
+            (data.executing as string[]).push(e.toString());
+            rerender();
+        })
+    }
+
+    function getDistPath() {
+        const titlesafe = data.title.split("/").join("⌿");
+        return path.join(os.homedir(), "Music", titlesafe+".mp3");
+    }
+    function getcmds() {
+        const rescmd: string[][] = [];
+        rescmd.push(["[", "!", "-f", getDistPath(), "]"]);
+        if(data.from.active === "youtube") {
+            let videoid = data.from.youtube.videoid;
+            if(videoid.includes("v=")) {
+                try {
+                    videoid = new URL(videoid).search;
+                }catch(e){
+                    videoid = "";
+                }
+            }
+            const safevideoid = videoid.replace(/[^a-zA-Z0-9\-_]/g, "!");
+            rescmd.push(["youtube-dl", "https://www.youtube.com/watch?v="+safevideoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
+        }else if(data.from.active === "file") {
+            rescmd.push(["cp", data.from.file.filepath, "dnl0.mp3"]);
+        }else{
+            assertNever(data.from.active);
+        }
+
+        if(+data.tempo > 1) {
+            rescmd.push(["sox", "dnl0.mp3", "dnl1.mp3", "tempo", "" + (+data.tempo)]);
+        }else{
+            rescmd.push(["mv", "dnl0.mp3", "dnl1.mp3"]);
+        }
+ 
+        rescmd.push(["mv", "dnl1.mp3", getDistPath()]);
+
+        return rescmd;
+    }
+
     // prettier-ignore
     const rndr = () => html`
-        <h1>Add Songs</h1>
+        <h1>Add Song</h1>
         <div class="hlist">
-            <button class="lyricsedtr-button" onclick=${close}>Done</button>
+            <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button unimportant" onclick=${close}>Cancel</button>
+            <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button" onclick=${exec}>${data.executing ? data.allowCloseExecuting ? "↺ Retry" : "..." : "+ Add"}</button>
         </div>
-        <div class="hlist">
-            <button class="lyricsedtr-button" onclick=${additm}>+ Add</button>
-        </div>
-        ${list.map((it, i) => html`
-            <div>
-                <input type="text" class="lyricsedtr-input" value="${it}" oninput=${e => list[i] = (e.currentTarget as any).value} />
+        ${data.executing ? html`
+            <div class="hlist">
+                <button class="lyricsedtr-button" disabled=${data.allowCloseExecuting ? undefined : ""} onclick=${() => {data.executing = false; rerender();}}>Edit</button>
             </div>
-        `)}
-    `;
+            <div class="cmdline">${data.executing.map((v) => html`<div>Out: <code>${v}</code></div>`)}</div>
+        ` : html`
+            <h2>File:</h2>
+            <div class="tablist">
+                <button class=${"lyricsedtr-button"+(data.from.active === "youtube" ? "" : " unimportant")} onclick=${() => setTab("youtube")}>Youtube</button>
+                <button class=${"lyricsedtr-button"+(data.from.active === "file" ? "" : " unimportant")} onclick=${() => setTab("file")}>Local File</button>
+            </div>
+            ${data.from.active === "youtube" ? html`
+                <div>
+                    <label>watch?v=<input type="text" class="lyricsedtr-input" style="width: auto;" value=${data.from.youtube.videoid} oninput=${(e: any) => {data.from.youtube.videoid = e.currentTarget.value; rerender();}} /></label>
+                </div>
+            ` : data.from.active === "file" ? html`
+                <div>
+                    <input type="file" onchange=${(e: any) => {data.from.file.filepath = e.currentTarget.files[0].path; rerender();}} />
+                </div>
+            ` : assertNever(data.from.active)}
+            <h2>Speed:</h2>
+            <div>
+                <label>Tempo: <input type="text" class="lyricsedtr-input" value=${data.tempo} style="width: auto;" oninput=${(e: any) => {data.tempo = e.currentTarget.value; rerender();}} /></label>
+            </div>
+            <h2>Title:</h2>
+            <div>
+                <label>Title: <input type="text" class="lyricsedtr-input" value=${data.title} oninput=${(e: any) => {data.title = e.currentTarget.value; rerender();}} /></label>
+            </div>
+            <h2>Command:</h2>
+            <code>${getcmds().map(part => html`<div class="cmdline">${joinBetween(part.map(cmdbit => html`<span class="cmdpart">${cmdbit}</span>`), html` ${" "}`)}</div>`)}</code>
+        `}`;
+    // we need a custom version of join that just adds the part in. arrayJoin([1, 2, 3], () => 0) eg would make [1, 0, 2, 0, 3]
     const rerender = () => {
         render(mainel, rndr());
     };
@@ -1429,8 +1586,11 @@ function songAddPanel(data: Data, onclose: () => void) {
     // - go button (disables everything else)
 
     const res = {
-        render() {},
+        render() {
+            rerender();
+        },
     };
+    return res;
 }
 
 const holder = document;
