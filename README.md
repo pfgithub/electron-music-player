@@ -63,6 +63,8 @@ Click the thing to skip to the end of the queue and play immediately, press the 
 
 Use `yarn build-watch` to automatically build when you change a file. Use an editor plugin to see typescript errors (also don't use atom because it will run at <15fps)
 
+Likely the only file you have to edit is `src/player.ts`. The window is created in `src/main.ts`, so edit that if you need to create new windows or adjust hotkeys.
+
 ## TODO
 
 things that might be done in the future if I ever get too tired of not having them:
@@ -73,6 +75,7 @@ things that might be done in the future if I ever get too tired of not having th
 - highlight search match locations in the lyrics display
 - add the ability to trim audio files (interactive editor - pick start and end location, test that start and end locations are correct, trim by running ffmpeg)
 - ui improvements, especially for the edit and add pages so they don't look so disorganized. also, potentially the edit page could be split in half and have lyrics shown on the right and have overscroll so you can scroll past the bottom of the textbox.
+- global hotkeys
 
 things that would be good to do but I probably won't ever need:
 
