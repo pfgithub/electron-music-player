@@ -1559,8 +1559,8 @@ function songAddPanel(outerData: Data, onclose: () => void) {
     const rndr = () => html`
         <h1>Add Song</h1>
         <div class="hlist">
-            <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button unimportant" onclick=${close}>Cancel</button>
             <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button" onclick=${exec}>${data.executing ? data.allowCloseExecuting ? "↺ Retry" : "..." : "+ Add"}</button>
+            <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button unimportant" onclick=${close}>Cancel</button>
         </div>
         ${data.executing ? html`
             <div class="hlist">
