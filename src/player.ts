@@ -86,6 +86,7 @@ $scss`
 	margin: 0;
 }
 .nowplaying {
+    z-index: 5;
     background: var(--background);
     border-radius: 0 0 10px 10px;
     position: sticky;
@@ -113,14 +114,15 @@ $scss`
 }
 
 .columns {
-	position: absolute;
-	z-index: 10;
     width: 100%;
     box-sizing: border-box;
     
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+}
+.column {
+    margin-bottom: 10px;
 }
 .vgrid {
     display: grid;
@@ -150,6 +152,9 @@ ul, p, h1, h2 {margin: 0;}
 .icon {
 	width: 20px;
 	height: 20px;
+}
+.lyricsedtr.vgrid.maxhv {
+    grid-template-rows: max-content max-content 1fr;
 }
 body {
 	background-color: var(--background);
@@ -332,6 +337,9 @@ li:hover .itembuttons {
     vertical-align: middle;
     border-radius: 10px;
     border: 3px solid var(--foreground);
+}
+.h100 {
+    height: 100%
 }
 textarea.lyricsedtr-input {
     padding: 10px;
@@ -1036,7 +1044,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
 
     const win = el("div")
         .adto(body)
-        .clss(".lyricsedtr.vgrid")
+        .clss(".lyricsedtr.vgrid.maxhv")
         .drmv(defer);
 
     win.setAttribute("style", document.documentElement.getAttribute("style") || "");
@@ -1125,7 +1133,11 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             defer.cleanup();
         });
 
-    const titlegroup = el("div").adto(win);
+    const cols = el("div").clss("columns").adto(win);
+    const col1 = el("div").clss(".column.vgrid").adto(cols);
+    const col2 = el("div").clss(".column").adto(cols);
+
+    const titlegroup = el("div").adto(col1);
     el("h2")
         .adto(titlegroup)
         .atxt("Title");
@@ -1138,7 +1150,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = songtags.title || defaultTitle));
 
-    const authorgroup = el("div").adto(win);
+    const authorgroup = el("div").adto(col1);
 
     el("h2")
         .adto(authorgroup)
@@ -1150,7 +1162,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         .clss("lyricsedtr-input")
         .dwth(v => (v.value = songtags.artist || defaultArtist));
 
-    const artgroup = el("div").adto(win);
+    const artgroup = el("div").adto(col1);
     el("h2")
         .adto(artgroup)
         .atxt("Art");
@@ -1194,7 +1206,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             });
     }
 
-    const lyrixgrup = el("div").adto(win);
+    const lyrixgrup = el("div").adto(col1);
     el("h2")
         .adto(lyrixgrup)
         .atxt("Lyrics");
@@ -1233,9 +1245,9 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
     defer(() => lspanel.close());
 
     const txtarya = el("textarea")
-        .adto(el("div").adto(win))
+        .adto(el("div").clss("h100").adto(col2))
         .attr({ placeholder: "Lyrics..." })
-        .clss("lyricsedtr-input")
+        .clss("lyricsedtr-input.h100")
         .dwth(v => (v.value = "" + songtags.album));
 
     const txtaryaupd8 = anychange([txtarya], () => {
@@ -1444,20 +1456,29 @@ function songAddPanel(outerData: Data, onclose: () => void) {
             execarr.push([pnme, ...args].join(" "));
             rerender();
             const spawned = child_process.spawn(pnme, args, {cwd: tmpdir});
-            function addText(stdv: string, txtv: string) {
-                if(txtv.startsWith("\r")) {
-                    execarr.pop();
+            let activeTextBit: string | undefined = undefined;
+            function writeTextBit(_stdv: string, textbit: string) {
+                for(let char of textbit.split("")) {
+                    if(activeTextBit === undefined) {
+                        execarr.push("");
+                        activeTextBit = "";
+                    }
+                    if(char === "\n") {
+                        activeTextBit = undefined;
+                    }else if(char === "\r") {
+                        activeTextBit = "";
+                    }else{
+                        activeTextBit += char;
+                        execarr[execarr.length - 1] = activeTextBit;
+                    }
                 }
-                execarr.push(stdv+": "+txtv);
             }
             spawned.stdout.on("data", rv => {
-                const txtstr = rv.toString() as string;
-                txtstr.split("\n").forEach(itm => addText("stdout", itm));
+                writeTextBit("stdout", rv.toString());
                 rerender();
             });
             spawned.stderr.on("data", rv => {
-                const txtstr = rv.toString() as string;
-                txtstr.split("\n").forEach(itm => addText("stderr", itm));
+                writeTextBit("stderr", rv.toString());
                 rerender();
             });
             const rescode = await new Promise(r => {spawned.addListener("close", (code) => {

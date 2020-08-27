@@ -74,7 +74,7 @@ things that might be done in the future if I ever get too tired of not having th
 - sort the sidebar
 - highlight search match locations in the lyrics display
 - add the ability to trim audio files (interactive editor - pick start and end location, test that start and end locations are correct, trim by running ffmpeg)
-- ui improvements, especially for the edit and add pages so they don't look so disorganized. also, potentially the edit page could be split in half and have lyrics shown on the right and have overscroll so you can scroll past the bottom of the textbox.
+- ui improvements, especially for the edit and add pages so they don't look so disorganized.
 - global hotkeys
 
 things that would be good to do but I probably won't ever need:
