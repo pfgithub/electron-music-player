@@ -1430,18 +1430,28 @@ function songAddPanel(outerData: Data, onclose: () => void) {
             youtube: {videoid: ""},
             file: {filepath: ""},
         },
-        tempo: "2.0",
+        tempo: "",
         title: "",
         executing: false as false | ExecData,
         allowCloseExecuting: false,
     };
     
     async function execRun() {
+    
         const execarr: string[] = [];
         data.executing = execarr;
         data.allowCloseExecuting = false;
         rerender();
         
+        const {cmds, errs} = getcmds();
+        if(errs.length) {
+            execarr.push("Failed: "+errs.join(", "));
+            data.allowCloseExecuting = true;
+            rerender();
+            
+            return;
+        }
+
         const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "musicplayer-"));
         console.log(tmpdir);
         
@@ -1450,15 +1460,14 @@ function songAddPanel(outerData: Data, onclose: () => void) {
             // await fs.promises.rmdir(tmpdir, {recursive: true});
             child_process.spawnSync("rm", ["-rf", tmpdir]);
         }
-        
-        const cmds = getcmds();
+
         for(const [pnme, ...args] of cmds) {
             execarr.push([pnme, ...args].join(" "));
             rerender();
             const spawned = child_process.spawn(pnme, args, {cwd: tmpdir});
             let activeTextBit: string | undefined = undefined;
             function writeTextBit(_stdv: string, textbit: string) {
-                for(let char of textbit.split("")) {
+                for(const char of textbit.split("")) {
                     if(activeTextBit === undefined) {
                         execarr.push("");
                         activeTextBit = "";
@@ -1525,6 +1534,7 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         return path.join(os.homedir(), "Music", titlesafe+".mp3");
     }
     function getcmds() {
+        const missing: string[] = [];
         const rescmd: string[][] = [];
         rescmd.push(["[", "!", "-f", getDistPath(), "]"]);
         if(data.from.active === "youtube") {
@@ -1538,28 +1548,34 @@ function songAddPanel(outerData: Data, onclose: () => void) {
             }
             const safevideoid = videoid.replace(/[^a-zA-Z0-9\-_]/g, "!");
             rescmd.push(["youtube-dl", "https://www.youtube.com/watch?v="+safevideoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
+            if(!safevideoid) missing.push("youtube video id");
         }else if(data.from.active === "file") {
             rescmd.push(["cp", data.from.file.filepath, "dnl0.mp3"]);
+            if(!data.from.file.filepath) missing.push("file not chosen");
         }else{
             assertNever(data.from.active);
         }
 
         if(+data.tempo > 1) {
             rescmd.push(["sox", "dnl0.mp3", "dnl1.mp3", "tempo", "" + (+data.tempo)]);
-        }else{
+        }else if(+data.tempo === 1){
             rescmd.push(["mv", "dnl0.mp3", "dnl1.mp3"]);
+        }else{
+            missing.push("playback rate not set or is below 1");
         }
+        
+        if(!data.title) missing.push("title not set");
  
         rescmd.push(["mv", "dnl1.mp3", getDistPath()]);
 
-        return rescmd;
+        return {cmds: rescmd, errs: missing};
     }
 
     // prettier-ignore
-    const rndr = () => html`
+    const rndr = (cmdsv: {cmds: string[][]; errs: string[]}) => html`
         <h1>Add Song</h1>
         <div class="hlist">
-            <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button" onclick=${exec}>${data.executing ? data.allowCloseExecuting ? "↺ Retry" : "..." : "+ Add"}</button>
+            <button disabled=${cmdsv.errs.length || (data.executing && !data.allowCloseExecuting) ? "" : undefined} class="lyricsedtr-button" onclick=${exec}>${data.executing ? data.allowCloseExecuting ? "↺ Retry" : "..." : "+ Add"}</button>
             <button disabled=${data.executing && !data.allowCloseExecuting ? "" : undefined} class="lyricsedtr-button unimportant" onclick=${close}>Cancel</button>
         </div>
         ${data.executing ? html`
@@ -1584,18 +1600,23 @@ function songAddPanel(outerData: Data, onclose: () => void) {
             ` : assertNever(data.from.active)}
             <h2>Speed:</h2>
             <div>
-                <label>Tempo: <input type="text" class="lyricsedtr-input" value=${data.tempo} style="width: auto;" oninput=${(e: any) => {data.tempo = e.currentTarget.value; rerender();}} /></label>
+                <label>Playback Rate: <input required placeholder="1.0" type="text" class="lyricsedtr-input" value=${data.tempo} style="width: auto;" oninput=${(e: any) => {data.tempo = e.currentTarget.value; rerender();}} /></label>
             </div>
             <h2>Title:</h2>
             <div>
-                <label>Title: <input type="text" class="lyricsedtr-input" value=${data.title} oninput=${(e: any) => {data.title = e.currentTarget.value; rerender();}} /></label>
+                <input type="text" placeholder="Artist · Another - Song Title" class="lyricsedtr-input" value=${data.title} oninput=${(e: any) => {data.title = e.currentTarget.value; rerender();}} />
             </div>
-            <h2>Command:</h2>
-            <code>${getcmds().map(part => html`<div class="cmdline">${joinBetween(part.map(cmdbit => html`<span class="cmdpart">${cmdbit}</span>`), html` ${" "}`)}</div>`)}</code>
+            ${cmdsv.errs.length ? html`
+                <h2>Errors:</h2>
+                <ul>${cmdsv.errs.map(err => html`<li>${err}</li>`)}</ul>
+            ` : html`
+                <h2>Command:</h2>
+                <code>${cmdsv.cmds.map(part => html`<div class="cmdline">${joinBetween(part.map(cmdbit => html`<span class="cmdpart">${cmdbit}</span>`), html` ${" "}`)}</div>`)}</code>
+            `}
         `}`;
     // we need a custom version of join that just adds the part in. arrayJoin([1, 2, 3], () => 0) eg would make [1, 0, 2, 0, 3]
     const rerender = () => {
-        render(mainel, rndr());
+        render(mainel, rndr(getcmds()));
     };
 
     rerender();
