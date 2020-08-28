@@ -1614,6 +1614,7 @@ function songAddPanel(outerData: Data, onclose: () => void) {
     return res;
 }
 
+/*
 const holder = document;
 
 holder.ondragover = () => {
@@ -1641,3 +1642,4 @@ holder.ondrop = e => {
 
     return false;
 };
+*/
