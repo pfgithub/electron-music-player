@@ -1249,10 +1249,6 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         .attr({ placeholder: "Lyrics..." })
         .clss("lyricsedtr-input.h100")
         .dwth(v => (v.value = "" + songtags.album));
-
-    const txtaryaupd8 = anychange([txtarya], () => {
-        txtarya.rows = txtarya.value.split("\n").length + 1;
-    });
 }
 
 type LyricResult = {
