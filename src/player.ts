@@ -469,7 +469,10 @@ function MusicPlayer(mount: HTMLElement) {
     const songlistaddbtn = el("button")
         .clss(".lyricsedtr-button.unimportant")
         .adto(songlistbuttonrow)
-        .atxt("Add");
+        .atxt("+ Add");
+    const songlistqueuefiltered = el("input")
+        .attr({type: "checkbox"})
+        .adto(el("label").atxt("Random Filter").adto(songlistbuttonrow));
     const songlyricscol = el("div")
         .clss(".column.vgrid")
         .adto(cols);
@@ -477,13 +480,19 @@ function MusicPlayer(mount: HTMLElement) {
     const queue: (MusicData | undefined)[] = [];
     let queueIndex = 0;
 
+    function getRandomSong() {
+        if(songlistqueuefiltered.checked)
+            return randomOfArray(data.music.filter(song => playlistFilter(song, data.filter)));
+        return randomOfArray(data.music);
+    }
+
     function setQueueIndex(envy: number) {
         queueIndex = envy;
         while (queueIndex < 0) {
             queue.unshift(undefined);
             queueIndex += 1;
         }
-        if (!queue[queueIndex]) queue[queueIndex] = randomOfArray(data.music);
+        if (!queue[queueIndex]) queue[queueIndex] = getRandomSong();
         data.nowPlaying = queue[queueIndex];
         data.nowPlayingUpdated += 1;
         data.update();
