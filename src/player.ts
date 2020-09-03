@@ -1248,7 +1248,6 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             txtarya.value = updnfo.lyrics;
             if (updnfo.image) setImage(updnfo.image.buffer, updnfo.image.format);
             console.log(updnfo);
-            txtaryaupd8();
         },
     );
     defer(() => lspanel.close());
