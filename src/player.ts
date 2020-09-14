@@ -608,10 +608,15 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
         .adto(parent)
         .drmv(defer);
 
+    const buttonbar = el("div").adto(nowPlayingLyrics);
     const editButton = el("button")
         .clss("lyricsedtr-button")
         .atxt("…")
-        .adto(el("div").adto(nowPlayingLyrics));
+        .adto(buttonbar);
+    const timeButton = el("button")
+        .clss("lyricsedtr-button unimportant")
+        .atxt("…")
+        .adto(buttonbar);
     const lyricContainer = txt("…").adto(
         el("p")
             .clss("lyrics")
@@ -621,6 +626,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
     const prevData = {
         lyrics: undefined as any,
         allowEdit: undefined as any,
+        timing: undefined as any,
     };
 
     let lyricsEditorVisible = false;
@@ -636,6 +642,15 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
             data.musicUpdated += 1; // in case of save
             data.update();
         });
+    });
+    timeButton.onev("click", e => {
+        // before each line, put a blank spot. at the top line, have it show the time of the media player.
+        // when you click a line, set its time to the time of the current media player time
+        // then go to the next line
+        // you can click further than the next line or something
+        // also skip lines starting with [ or __FAVORITE__ or blank
+        //
+        alert("TODO!");
     });
 
     const res = {
@@ -658,8 +673,10 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
                 editButton.disabled = !allowEdit;
                 if (allowEdit) {
                     editButton.textContent = "Edit!";
+                    timeButton.textContent = "Time";
                 } else {
                     editButton.textContent = "…";
+                    timeButton.textContent = "…";
                 }
             }
         },
