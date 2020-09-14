@@ -28,7 +28,7 @@ const Genius = (window as any)["require"]("node-genius");
 
 const render = uhtml.render;
 const html = uhtml.html;
-const svg = uhtml.svg;
+// const svg = uhtml.svg;
 
 let lyricsClients: { genius: any; lyricist: any } | undefined;
 try {
@@ -398,9 +398,6 @@ textarea.lyricsedtr-input {
     white-space: pre-wrap;
 }
 `;
-
-const lastList = 0;
-let llTimeout: NodeJS.Timeout;
 
 function spawnParticle(x: number, y: number, text: string) {
     el("div")
@@ -838,10 +835,6 @@ const playlistFilter = (song: MusicData, filterStr: string) => {
         .split(" ")
         .every(i => (searchdata.includes(i) ? ((searchdata = searchdata.replace(i, "")), true) : false));
 };
-
-function createLoadingSpinner() {
-    return el("span").atxt("...");
-}
 
 async function getDarkLight(imgbuffer: Buffer): Promise<ColorProperty> {
     const vibrant = Vibrant.from(imgbuffer);
