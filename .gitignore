@@ -4,3 +4,4 @@ package-lock.json
 dist
 yarn-error.log
 src/secret.json
+musicplayer.socket

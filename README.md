@@ -59,6 +59,22 @@ Start a search with `!` to match exact text. Start a search with `/` to match re
 
 Click the thing to skip to the end of the queue and play immediately, press the `+` button to add to the end of the queue.
 
+### Global hotkeys
+
+Configure a global hotkey manager, eg
+
+- mac: skhd
+- windows: google.com
+- linux: idk, I'm using ckb-next for single keys and i3 for hotkeys
+
+Then, bind keys of your choosing to:
+
+`node /path/to/electron-music-player/src/ipc.js [command]`
+
+command can be any of: `playpuase`, `next`, `prev`, `play`, `pause`, `randomfiltertoggle`, `randomfilteron`, `randomfilteroff`
+
+I have scroll lock/pause break bound to prev/next, page up bound to playpause, and page down bound to randomfiltertoggle.
+
 ## Contributing
 
 Use `yarn build-watch` to automatically build when you change a file. Use an editor plugin to see typescript errors (also don't use atom because it will run at <15fps)
@@ -75,7 +91,6 @@ things that might be done in the future if I ever get too tired of not having th
 - highlight search match locations in the lyrics display
 - add the ability to trim audio files (interactive editor - pick start and end location, test that start and end locations are correct, trim by running ffmpeg)
 - ui improvements, especially for the edit and add pages so they don't look so disorganized.
-- global hotkeys
 
 things that would be good to do but I probably won't ever need:
 

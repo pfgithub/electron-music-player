@@ -22,6 +22,8 @@ import * as Vibrant from "node-vibrant";
 import * as ffmetadata_ from "ffmetadata";
 import * as child_process from "child_process";
 import * as uhtml from "uhtml";
+import * as ipc from "node-ipc";
+import notifier from "node-notifier";
 import fetch from "node-fetch";
 const Lyricist = (window as any)["require"]("lyricist");
 const Genius = (window as any)["require"]("node-genius");
@@ -561,6 +563,50 @@ function MusicPlayer(mount: HTMLElement) {
     const prevData = {
         filter: "",
     };
+
+    ipc.config.id = "music";
+    //eslint-disable-next-line @typescript-eslint/unbound-method
+    ipc.config.logger = (...msg) => console.log(...msg);
+    ipc.serve("musicplayer.socket", () => {
+        console.log("Server started");
+        ipc.server.on("connect", () => {});
+        ipc.server.on("message", (ipcmsg, socket) => {
+            console.log("IPC Message: ", ipcmsg);
+            if(ipcmsg === "next") {
+                data.play = true;
+                data.addQueue(1);
+                notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
+            }else if(ipcmsg === "prev") {
+                data.play = true;
+                data.addQueue(-1);
+                notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
+            }else if(ipcmsg === "play") {
+                data.play = true;
+                data.update();
+            }else if(ipcmsg === "pause") {
+                data.play = false;
+                data.update();
+            }else if(ipcmsg === "playpause") {
+                data.play =! data.play;
+                data.update();
+                notifier.notify({message: data.play ? "Playing" : "Pausing", timeout: 0.5, title: "Musicplayer"});
+            }else if(ipcmsg === "randomfiltertoggle") {
+                songlistqueuefiltered.checked =! songlistqueuefiltered.checked;
+                notifier.notify({message: songlistqueuefiltered.checked ? "Filter On" : "Filter Off", timeout: 0.5, title: "Musicplayer"});
+            }else if(ipcmsg === "randomfilteron") {
+                songlistqueuefiltered.checked = true;
+            }else if(ipcmsg === "randomfilteroff") {
+                songlistqueuefiltered.checked = false;
+            }else{
+                console.log("bad ipc", ipcmsg);
+                ipc.server.emit(socket, "message", "bad request");
+                notifier.notify({message: "Bad IPC, "+("" + ipcmsg), title: "Musicplayer"});
+                return;
+            }
+            ipc.server.emit(socket, "message", "handled");
+        });
+    });
+    ipc.server.start();
 
     const musiclist = listMusicElem(songlistcol, data);
     const nowplaying = nowPlayingElem(nowPlayingBar, data);
