@@ -198,6 +198,10 @@ li:hover {
 	background-color: var(--track-foreground);
 	color: var(--track-background);
 }
+.lyricline:hover {
+    background-color: var(--foreground);
+    color: var(--background);
+}
 .icon {
 	visibility: hidden;
 }
@@ -502,9 +506,9 @@ function MusicPlayer(mount: HTMLElement) {
         filter: "",
         music: [] as MusicData[],
         musicUpdated: 1,
-
         nowPlaying: undefined,
         nowPlayingUpdated: 1,
+        elAudio: undefined,
 
         queueImmediate(song: MusicData) {
             queue.push(song);
@@ -638,6 +642,7 @@ type Data = {
     musicUpdated: number;
     nowPlaying: MusicData | undefined;
     nowPlayingUpdated: number;
+    elAudio: HTMLAudioElement | undefined;
 
     queueImmediate(song: MusicData): void;
     queueFinal(song: MusicData): void;
@@ -663,7 +668,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
         .clss("lyricsedtr-button unimportant")
         .atxt("…")
         .adto(buttonbar);
-    const lyricContainer = txt("…").adto(
+    const lyricContainer = el("div").atxt("…").adto(
         el("p")
             .clss("lyrics")
             .adto(nowPlayingLyrics),
@@ -698,6 +703,17 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
         //
         alert("TODO!");
     });
+    
+    function refillLyrics(lyrics: string) {
+        lyricContainer.innerHTML = "";
+        for(const line of lyrics.split("\n")) {
+            const dv = el("div").clss("lyricline").atxt(line).adto(lyricContainer).adch(el("br"));
+            // dv.onev("click", () => {
+            //     const ct = data.elAudio!.currentTime;
+            //     dv.prepend(el("span").atxt("" + ct));
+            // });
+        }
+    }
 
     const res = {
         update() {
@@ -708,7 +724,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
                 : "Not playing";
             if (thisLyrics !== prevData.lyrics) {
                 prevData.lyrics = thisLyrics;
-                lyricContainer.nodeValue = thisLyrics;
+                refillLyrics(thisLyrics);
             }
             let allowEdit = false;
             if (data.nowPlaying && data.nowPlaying.tags) {
@@ -1016,6 +1032,7 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
     const elAudio = el("audio")
         .adto(nowPlayingBar)
         .drmv(defer);
+        data.elAudio = elAudio;
 
     const prev = {
         nowPlaying: undefined as any,
