@@ -99,6 +99,7 @@ $scss`
     & > * {
     	-webkit-app-region: no-drag;
     }
+    box-shadow: 0 -10px 30px black;
 }
 
 .verticallist {
@@ -150,6 +151,7 @@ ul, p, h1, h2 {margin: 0;}
 .nowplaying_art {
 	width: 60px;
 	height: 60px;
+    box-shadow: 0 2px 9px -3px black;
 }
 .icon {
 	width: 20px;
@@ -191,16 +193,15 @@ ul {
 li {
 	list-style-type: none;
 }
-li.playing {
-	background-color: var(--background);
-}
-li:hover {
+li:hover, li.playing {
 	background-color: var(--track-foreground);
 	color: var(--track-background);
+    box-shadow: 0 1px 9px -3px #000;
 }
 .lyricline:hover {
     background-color: var(--foreground);
     color: var(--background);
+    box-shadow: 0 1px 9px -3px #000;
 }
 .icon {
 	visibility: hidden;
@@ -244,6 +245,10 @@ button {
 }
 .skipback {
 	transform: rotate(180deg);
+}
+
+.random_filter {
+    font-size: 13.3333px;
 }
 
 // more
@@ -473,9 +478,11 @@ function MusicPlayer(mount: HTMLElement) {
         .clss(".lyricsedtr-button.unimportant")
         .adto(songlistbuttonrow)
         .atxt("+ Add");
+    const rflabel = el("label").clss(".random_filter").adto(songlistbuttonrow);
     const songlistqueuefiltered = el("input")
         .attr({type: "checkbox"})
-        .adto(el("label").atxt("Random Filter").adto(songlistbuttonrow));
+        .adto(rflabel);
+    rflabel.atxt("Random Filter");
     const songlyricscol = el("div")
         .clss(".column.vgrid")
         .adto(cols);
