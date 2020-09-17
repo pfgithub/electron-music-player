@@ -2,9 +2,9 @@
 
 A simple music player in electron
 
-![screenshot](.github/demo-2020-08-26.png)
+![screenshot](.github/demo-2020-09-16.png)
 
-![screenshot](.github/demo-edit-2020-07-30.png)
+![screenshot](.github/demo-edit-2020-09-16.png)
 
 Music is loaded from ~/Music/\*\*\*.mp3 by default.
 
@@ -91,6 +91,7 @@ things that might be done in the future if I ever get too tired of not having th
 - highlight search match locations in the lyrics display
 - add the ability to trim audio files (interactive editor - pick start and end location, test that start and end locations are correct, trim by running ffmpeg)
 - ui improvements, especially for the edit and add pages so they don't look so disorganized.
+- full keyboard control (eg tab+enter works to select things from the list, ctrl+s to save and close the edit screen, escape to cancel, tab works to select the plus button on things, …)
 
 things that would be good to do but I probably won't ever need:
 
