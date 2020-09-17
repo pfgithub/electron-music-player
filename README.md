@@ -92,6 +92,7 @@ things that might be done in the future if I ever get too tired of not having th
 - add the ability to trim audio files (interactive editor - pick start and end location, test that start and end locations are correct, trim by running ffmpeg)
 - ui improvements, especially for the edit and add pages so they don't look so disorganized.
 - full keyboard control (eg tab+enter works to select things from the list, ctrl+s to save and close the edit screen, escape to cancel, tab works to select the plus button on things, …)
+- option to associate time codes with lyrics (using the edit button) and then the reverse, clicking a lyric to jump to the time code
 
 things that would be good to do but I probably won't ever need:
 
