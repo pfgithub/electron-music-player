@@ -1,6 +1,6 @@
 import "./_stdlib";
 
-export function $scss(data: TemplateStringsArray) {
+function $scss(data: TemplateStringsArray) {
     const styleValue = data[0];
     const styleElem = document.createElement("style");
     styleElem.appendChild(document.createTextNode(styleValue));
@@ -15,7 +15,7 @@ const config = {
     maxMusicSearchDepth: 10, // Max search depth of folders in music added
 };
 
-import {fs, os, path, Color_, mm, Vibrant, ffmetadata_, child_process, uhtml, ipc, notifier, fetch, Lyricist, Genius, enableIPC, isWeb} from "./crossplatform_web";
+import {fs, os, path, Color_, mm, Vibrant, ffmetadata_, child_process, uhtml, ipc, notifier, fetch, Lyricist, Genius, enableIPC, isWeb} from "./crossplatform";
 
 const render = uhtml.render;
 const html = uhtml.html;
@@ -89,7 +89,7 @@ $scss`
     	-webkit-app-region: no-drag;
     }
     box-shadow: 0 -10px 30px black;
-    overflow-x: scroll;
+    overflow-x: auto;
 }
 
 .verticallist {
@@ -166,6 +166,7 @@ body > div {
 }
 ::-webkit-scrollbar {
 	width: 4px;
+    height: 4px;
 	background: var(--background);
 }
 ::-webkit-scrollbar-thumb {

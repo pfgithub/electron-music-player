@@ -1,0 +1,26 @@
+{
+	"name": "babel-plugin-transform-inline-scss",
+	"version": "1.0.1",
+	"description": "Babel transform to convert inline $scss`.scss{code}` to css",
+	"keywords": [
+		"babel-plugin"
+	],
+	"license": "MIT",
+	"author": "pfgithub <omegariisthebest@gmail.com>",
+	"files": [
+		"index.js"
+	],
+	"main": "index.js",
+	"repository": "https://github.com/pfgithub/babel-plugin-transform-inline-scss",
+	"scripts": {
+		"test": "tap --100 test/test.js"
+	},
+	"dependencies": {
+		"sass": "^1.22.9"
+	},
+	"devDependencies": {
+		"babel-core": "^6.26.3",
+		"glob": "^7.1.4",
+		"tap": "^14.5.0"
+	}
+}

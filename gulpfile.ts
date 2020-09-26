@@ -2,6 +2,7 @@ import * as gulp from "gulp";
 import * as sourcemaps from "gulp-sourcemaps";
 import * as babel from "gulp-babel";
 import * as concat from "gulp-concat";
+import * as fs from "fs";
 
 // TODO prettier fmt
 
@@ -10,10 +11,15 @@ export default all;
 gulp.task("all", all);
 
 export async function typescript() {
+    // const babelConfig = JSON.parse(fs.readFileSync(".babelrc", "utf-8"));
+    const babelConfig = {plugins: [  {visitor: { Program: {enter: () => {},
+        exit: () => {}},ImportDeclaration(path) {if(path.node.source.value === "./crossplatform_web") {
+        path.node.source.value = "./crossplatform";}}}}]
+    };
     return gulp
         .src("src/**/*.ts")
         .pipe(sourcemaps.init())
-        .pipe(babel())
+        .pipe(babel(babelConfig as any))
         .pipe(sourcemaps.write("."))
         .pipe(gulp.dest("dist"));
 }
