@@ -89,6 +89,7 @@ $scss`
     	-webkit-app-region: no-drag;
     }
     box-shadow: 0 -10px 30px black;
+    overflow-x: scroll;
 }
 
 .verticallist {
@@ -1009,7 +1010,7 @@ async function readTags(filename: string) {
             const artBuffer = isWeb ? songTags.art : songTags.picture[0].data;
             songTags.color = await getDarkLight(artBuffer);
         }catch(e) {
-            console.log("Failed to load art", e);
+            // console.log("Failed to load art", e);
             songTags.color = { dark: Color("#000"), light: Color("#fff") };
         }
     } else {
@@ -1154,6 +1155,8 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
         data.play = true;
         data.addQueue(1);
     });
+    elAudio.onev("pause", () => {data.play = false;});
+    elAudio.onev("play", () => {data.play = true;});
 
     btnNext.addEventListener("click", (e /*: MouseEvent*/) => {
         e.stopPropagation();
