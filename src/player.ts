@@ -1,5 +1,11 @@
-import { $scss } from "./qdom";
 import "./_stdlib";
+
+export function $scss(data: TemplateStringsArray) {
+    const styleValue = data[0];
+    const styleElem = document.createElement("style");
+    styleElem.appendChild(document.createTextNode(styleValue));
+    document.head.appendChild(styleElem);
+}
 
 const config = {
     minContrast: 5.0,
@@ -9,24 +15,7 @@ const config = {
     maxMusicSearchDepth: 10, // Max search depth of folders in music added
 };
 
-import * as fs from "fs"; // .promises
-import * as os from "os";
-import * as path from "path";
-//@ts-ignore
-import Color_ from "color";
-//@ts-ignore
-import * as mm from "music-metadata";
-//@ts-ignore
-import * as Vibrant from "node-vibrant";
-//@ts-ignore
-import * as ffmetadata_ from "ffmetadata";
-import * as child_process from "child_process";
-import * as uhtml from "uhtml";
-import * as ipc from "node-ipc";
-import notifier from "node-notifier";
-import fetch from "node-fetch";
-const Lyricist = (window as any)["require"]("lyricist");
-const Genius = (window as any)["require"]("node-genius");
+import {fs, os, path, Color_, mm, Vibrant, ffmetadata_, child_process, uhtml, ipc, notifier, fetch, Lyricist, Genius, enableIPC, isWeb} from "./crossplatform_web";
 
 const render = uhtml.render;
 const html = uhtml.html;
@@ -533,18 +522,47 @@ function MusicPlayer(mount: HTMLElement) {
             data.play = true;
             setQueueIndex(queueIndex + 1);
         },
+        addRootMusic(): void {
+            if(isWeb) {
+                data.addMusic("/music/");
+            } else {
+                data.addMusic(path.join(os.homedir(), "Music"));
+            }
+        },
         addMusic(musicPath: string, depth = 1): void {
             if (depth > config.maxMusicSearchDepth) {
                 return;
             } //workaround for circular symlinks
-            const lstat = fs.statSync(musicPath);
-            if (lstat.isDirectory()) {
-                return fs
-                    .readdirSync(musicPath)
-                    .forEach(subPath => data.addMusic(path.join(musicPath, subPath), depth + 1));
+            if(isWeb) {
+                if(musicPath.endsWith("/")) {
+                    fetch(musicPath, {headers: {"Accept": "application/json"}})
+                    .then(a => a.json())
+                    .then((list: string[]) => {
+                        list.forEach(subpath => data.addMusic(musicPath + subpath), depth + 1);
+                    });
+                    return;
+                }else if(musicPath.endsWith(".mp3")){
+                    
+                }else{
+                    console.log("Unknown file ",{path: musicPath});
+                }
+            } else {
+                const lstat = fs.statSync(musicPath);
+                if (lstat.isDirectory()) {
+                    return fs
+                        .readdirSync(musicPath)
+                        .forEach(subPath => data.addMusic(path.join(musicPath, subPath), depth + 1));
+                }
+            }
+            let fileBasename: string;
+            if(isWeb) {
+                const lao = musicPath.lastIndexOf("/");
+                fileBasename = lao === -1 ? musicPath : musicPath.substr(lao + 1);
+            }else {
+                fileBasename = path.basename(musicPath);
             }
             const song = {
-                filename: path.basename(musicPath),
+                filename: fileBasename,
                 path: musicPath,
                 uuid: Symbol(musicPath),
                 tags: undefined as any,
@@ -575,49 +593,51 @@ function MusicPlayer(mount: HTMLElement) {
         filter: "",
     };
 
-    ipc.config.id = "music";
-    //eslint-disable-next-line @typescript-eslint/unbound-method
-    ipc.config.logger = (...msg) => console.log(...msg);
-    ipc.serve("musicplayer.socket", () => {
-        console.log("Server started");
-        ipc.server.on("connect", () => {});
-        ipc.server.on("message", (ipcmsg, socket) => {
-            console.log("IPC Message: ", ipcmsg);
-            if(ipcmsg === "next") {
-                data.play = true;
-                data.addQueue(1);
-                notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
-            }else if(ipcmsg === "prev") {
-                data.play = true;
-                data.addQueue(-1);
-                notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
-            }else if(ipcmsg === "play") {
-                data.play = true;
-                data.update();
-            }else if(ipcmsg === "pause") {
-                data.play = false;
-                data.update();
-            }else if(ipcmsg === "playpause") {
-                data.play =! data.play;
-                data.update();
-                notifier.notify({message: data.play ? "Playing" : "Pausing", timeout: 0.5, title: "Musicplayer"});
-            }else if(ipcmsg === "randomfiltertoggle") {
-                songlistqueuefiltered.checked =! songlistqueuefiltered.checked;
-                notifier.notify({message: songlistqueuefiltered.checked ? "Filter On" : "Filter Off", timeout: 0.5, title: "Musicplayer"});
-            }else if(ipcmsg === "randomfilteron") {
-                songlistqueuefiltered.checked = true;
-            }else if(ipcmsg === "randomfilteroff") {
-                songlistqueuefiltered.checked = false;
-            }else{
-                console.log("bad ipc", ipcmsg);
-                ipc.server.emit(socket, "message", "bad request");
-                notifier.notify({message: "Bad IPC, "+("" + ipcmsg), title: "Musicplayer"});
-                return;
-            }
-            ipc.server.emit(socket, "message", "handled");
+    if(enableIPC) {
+        ipc.config.id = "music";
+        //eslint-disable-next-line @typescript-eslint/unbound-method
+        ipc.config.logger = (...msg) => console.log(...msg);
+        ipc.serve("musicplayer.socket", () => {
+            console.log("Server started");
+            ipc.server.on("connect", () => {});
+            ipc.server.on("message", (ipcmsg, socket) => {
+                console.log("IPC Message: ", ipcmsg);
+                if(ipcmsg === "next") {
+                    data.play = true;
+                    data.addQueue(1);
+                    notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
+                }else if(ipcmsg === "prev") {
+                    data.play = true;
+                    data.addQueue(-1);
+                    notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
+                }else if(ipcmsg === "play") {
+                    data.play = true;
+                    data.update();
+                }else if(ipcmsg === "pause") {
+                    data.play = false;
+                    data.update();
+                }else if(ipcmsg === "playpause") {
+                    data.play =! data.play;
+                    data.update();
+                    notifier.notify({message: data.play ? "Playing" : "Pausing", timeout: 0.5, title: "Musicplayer"});
+                }else if(ipcmsg === "randomfiltertoggle") {
+                    songlistqueuefiltered.checked =! songlistqueuefiltered.checked;
+                    notifier.notify({message: songlistqueuefiltered.checked ? "Filter On" : "Filter Off", timeout: 0.5, title: "Musicplayer"});
+                }else if(ipcmsg === "randomfilteron") {
+                    songlistqueuefiltered.checked = true;
+                }else if(ipcmsg === "randomfilteroff") {
+                    songlistqueuefiltered.checked = false;
+                }else{
+                    console.log("bad ipc", ipcmsg);
+                    ipc.server.emit(socket, "message", "bad request");
+                    notifier.notify({message: "Bad IPC, "+("" + ipcmsg), title: "Musicplayer"});
+                    return;
+                }
+                ipc.server.emit(socket, "message", "handled");
+            });
         });
-    });
-    ipc.server.start();
+        ipc.server.start();
+    }
 
     const musiclist = listMusicElem(songlistcol, data);
     const nowplaying = nowPlayingElem(nowPlayingBar, data);
@@ -654,6 +674,7 @@ type Data = {
     queueImmediate(song: MusicData): void;
     queueFinal(song: MusicData): void;
     playNext(): void;
+    addRootMusic(): void;
     addMusic(musicPath: string, depth?: number): void;
     update(): void;
     addQueue(diff: number): void;
@@ -922,7 +943,7 @@ const playlistFilter = (song: MusicData, filterStr: string) => {
         .every(i => (searchdata.includes(i) ? ((searchdata = searchdata.replace(i, "")), true) : false));
 };
 
-async function getDarkLight(imgbuffer: Buffer): Promise<ColorProperty> {
+async function getDarkLight(imgbuffer: string | Buffer): Promise<ColorProperty> {
     const vibrant = Vibrant.from(imgbuffer);
     const swatches = await vibrant.getSwatches();
 
@@ -940,7 +961,10 @@ async function getDarkLight(imgbuffer: Buffer): Promise<ColorProperty> {
     return { dark, light };
 }
 class Mutex {
-    private mutex = Promise.resolve();
+    mutex: Promise<void>
+    constructor() {
+        this.mutex = Promise.resolve();
+    }
 
     lock(): PromiseLike<() => void> {
         let begin: (unlock: () => void) => void = () => {};
@@ -955,16 +979,39 @@ class Mutex {
     }
 }
 
+async function crossPlatformParseFile(filename: string): Promise<SongTags> {
+    if(isWeb) {
+        const data = await fetch(encodeURI(filename).replace(/[\?#]/g, ([v]) => encodeURIComponent(v)));
+        const stream = await data.body;
+        const parsed = await mm.parseReadableStream(stream, {fileInfo: {path: filename}});
+        return parsed.common as SongTags;
+    }else {
+        const v = await mm.parseFile(filename, {});
+        return v.common as SongTags;
+    }
+}
+
 const readTagsLock = new Mutex();
 async function readTags(filename: string) {
     const unlock = await readTagsLock.lock();
-    const songTags = (await mm.parseFile(filename, {})).common as SongTags;
+    let songTags: SongTags;
+    try {
+        songTags = await crossPlatformParseFile(filename);
+    }catch(e) {
+        console.log("Read tags error on ",filename);
+        unlock();
+        throw e;
+    }
     unlock();
     if (songTags.picture && songTags.picture[0]) {
         songTags.art = `data:${songTags.picture[0].format};base64,${songTags.picture[0].data.toString("base64")}`;
-        const artBuffer = songTags.picture[0].data;
-
-        songTags.color = await getDarkLight(artBuffer);
+        try {
+            const artBuffer = isWeb ? songTags.art : songTags.picture[0].data;
+            songTags.color = await getDarkLight(artBuffer);
+        }catch(e) {
+            console.log("Failed to load art", e);
+            songTags.color = { dark: Color("#000"), light: Color("#fff") };
+        }
     } else {
         songTags.art = `img/no_art.png`;
         songTags.color = { dark: Color("#a00"), light: Color("#fff") };
@@ -974,7 +1021,7 @@ async function readTags(filename: string) {
 
 // load music
 
-musicPlayer.addMusic(path.join(os.homedir(), "Music"));
+musicPlayer.addRootMusic();
 musicPlayer.playNext();
 
 function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
@@ -1087,7 +1134,7 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
 
             if (data.play !== !elAudio.paused) {
                 if (data.play) {
-                    elAudio.play();
+                    if(data.nowPlaying) elAudio.play();
                 } else {
                     elAudio.pause();
                 }
@@ -1278,21 +1325,21 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         updateFetchBtn(false);
         const urlv = arturlinput.value;
         fetch(urlv)
-            .then(fs1 => {
-                fs1.buffer()
-                    .then(fs2 => {
-                        setImage(fs2, urlv.substr(urlv.lastIndexOf(".") + 1));
-                        updateFetchBtn(true);
-                    })
-                    .catch(e => {
-                        alert(e.stack);
-                        updateFetchBtn(false);
-                    });
+        .then(fs1 => {
+            fs1.buffer()
+            .then(fs2 => {
+                setImage(fs2, urlv.substr(urlv.lastIndexOf(".") + 1));
+                updateFetchBtn(true);
             })
             .catch(e => {
                 alert(e.stack);
                 updateFetchBtn(false);
             });
+        })
+        .catch(e => {
+            alert(e.stack);
+            updateFetchBtn(false);
+        });
     }
 
     const lyrixgrup = el("div").adto(col1);
@@ -1303,21 +1350,21 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
     let imgset: { url: string; buffer: Buffer; egname: string; colors: ColorProperty; fmt: string } | undefined;
 
     function setImage(newimg: Buffer, format: string) {
-        getDarkLight(newimg)
-            .then(res => {
-                const srcval = "data:image/" + format + ";base64," + newimg.toString("base64");
-                albumArt.src = srcval;
-                win.style.setProperty("--background", res.dark.hex());
-                win.style.setProperty("--foreground", res.light.hex());
-                imgset = {
-                    url: srcval,
-                    buffer: newimg,
-                    egname: "__TEMPIMAGE." + format,
-                    fmt: format,
-                    colors: res,
-                };
-            })
-            .catch(e => alert(e.stack));
+        const srcval = "data:image/" + format + ";base64," + newimg.toString("base64");
+        getDarkLight(isWeb ? srcval : newimg)
+        .then(res => {
+            albumArt.src = srcval;
+            win.style.setProperty("--background", res.dark.hex());
+            win.style.setProperty("--foreground", res.light.hex());
+            imgset = {
+                url: srcval,
+                buffer: newimg,
+                egname: "__TEMPIMAGE." + format,
+                fmt: format,
+                colors: res,
+            };
+        })
+        .catch(e => alert(e.stack));
     }
 
     const lyricsearcharea = el("div").adto(lyrixgrup);

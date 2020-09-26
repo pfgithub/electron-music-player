@@ -1,8 +1,14 @@
 {
-	"presets": ["@babel/preset-typescript"],
+	"presets": [
+		"@babel/preset-typescript",
+		["env", {
+			"targets": {
+				"browsers": ">10%"
+			}
+		}]
+	],
 	"plugins": [
 		"transform-inline-scss",
-		"@babel/plugin-syntax-dynamic-import",
 		"babel-plugin-transform-es2015-modules-commonjs"
 	]
 }

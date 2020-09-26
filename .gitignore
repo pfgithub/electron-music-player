@@ -5,3 +5,6 @@ dist
 yarn-error.log
 src/secret.json
 musicplayer.socket
+.cache/
+.parcel-cache/
+dist_web/
