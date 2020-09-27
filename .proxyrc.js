@@ -8,4 +8,5 @@ module.exports = function (app) {
 	// app.use("/test", (req, res, next) => res.send("Hello, World!"));
 	app.use("/music", serveStatic(path.join(os.homedir(), "Music"), {index: false}));
 	app.use("/music", serveIndex(path.join(os.homedir(), "Music"), {}));
+	app.use(serveStatic(path.join(__dirname, "static"), {}));
 }

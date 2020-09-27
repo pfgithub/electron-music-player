@@ -2,13 +2,13 @@
     "name": "electron-quick-start",
     "version": "1.0.0",
     "description": "A minimal Electron application",
-    "main": "dist_web/main.html",
+    "main": "dist/main.js",
     "scripts": {
         "build": "gulp",
         "build-watch": "gulp watch",
-        "start": "electron .",
+        "start": "node set_main.js local && electron .",
         "web": "parcel serve src/player_web.html",
-        "web-build": "parcel build src/player_web.html --dist-dir dist_web"
+        "web-build": "node set_main.js web && parcel build src/player_web.html --dist-dir dist_web && node set_main.js local"
     },
     "repository": "https://github.com/electron/electron-quick-start",
     "keywords": [
