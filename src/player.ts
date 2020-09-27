@@ -418,17 +418,27 @@ type Color = {
 };
 const Color: (hex: string) => Color = Color_;
 type ColorProperty = {
-    dark: Color;
-    light: Color;
+    dark: string;
+    light: string;
 };
-type SongTags = {
+type RawSongTags = {
     title?: string;
     album?: string;
     picture?: { format: string; data: Buffer }[];
-    art: string;
     artist?: string;
-    color?: ColorProperty;
 };
+type SongTags = {
+    title?: string;
+    artist?: string;
+    lyrics?: string;
+    artdata: {b64: string; fmt: string} | undefined;
+    arturl: string;
+    color?: {dark: string; light: string};
+};
+function getArtURL(songTags: SongTags) {
+    if(!songTags.artdata) return "img/no_art.png";
+    return "data:image/"+songTags.artdata.fmt+";base64,"+songTags.artdata.b64;
+}
 type MusicData = {
     filename: string;
     path: string;
@@ -587,7 +597,7 @@ function MusicPlayer(mount: HTMLElement) {
                 prevData.filter = data.filter;
             }
             const song = data.nowPlaying;
-            const artsrc = song && song.tags ? song.tags.art || "" : "";
+            const artsrc = song && song.tags ? song.tags.arturl || "" : "";
             if (fsimg.src !== artsrc) fsimg.src = artsrc;
         },
     };
@@ -749,7 +759,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
         update() {
             const thisLyrics = data.nowPlaying
                 ? data.nowPlaying.tags
-                    ? data.nowPlaying.tags.album || "undefined"
+                    ? data.nowPlaying.tags.lyrics || "undefined"
                     : "…"
                 : "Not playing";
             if (thisLyrics !== prevData.lyrics) {
@@ -835,7 +845,7 @@ function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneList
             if (song.tags !== prevData.tags) {
                 prevData.tags = song.tags;
 
-                const imgsrc = song.tags ? song.tags.art || "" : "";
+                const imgsrc = song.tags ? song.tags.arturl || "" : "";
                 if (img.src !== imgsrc) img.src = imgsrc;
 
                 const newtxt =
@@ -846,8 +856,8 @@ function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneList
 
                 if (song.tags && song.tags.color) {
                     li.styl({
-                        "--track-foreground": song.tags.color.dark.hex(),
-                        "--track-background": song.tags.color.light.hex(),
+                        "--track-foreground": song.tags.color.dark,
+                        "--track-background": song.tags.color.light,
                     });
                 } else {
                     li.styl({ "--track-foreground": "#fff", "--track-background": "#000" });
@@ -919,8 +929,8 @@ const savedregex = { regex: new RegExp(""), text: "" };
 const playlistFilter = (song: MusicData, filterStr: string) => {
     let searchdata = song.filename;
     if (song.tags) {
-        const hasArt = song.tags.picture && song.tags.picture[0];
-        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.album} ${
+        const hasArt = !!song.tags.artdata;
+        searchdata += ` ${"" + song.tags.title} ${"" + song.tags.artist} ${"" + song.tags.lyrics} ${
             hasArt ? "__HAS_ART" : "__NO_ART"
         }`;
     }
@@ -960,7 +970,7 @@ async function getDarkLight(imgbuffer: string | Buffer): Promise<ColorProperty> 
         contrastRatio = dark.contrast(light);
     }
 
-    return { dark, light };
+    return { dark: dark.hex(), light: light.hex() };
 }
 class Mutex {
     mutex: Promise<void>
@@ -984,7 +994,7 @@ class Mutex {
 async function crossPlatformParseFile(filename: string): Promise<SongTags> {
     if(isWeb) {
         const data = await fetch(encodeURI(filename).replace(/[\?#]/g, ([v]) => encodeURIComponent(v)));
-        const stream = await data.body;
+        const stream = await (data.body as any);
         const parsed = await mm.parseReadableStream(stream, {fileInfo: {path: filename}});
         return parsed.common as SongTags;
     }else {
@@ -993,31 +1003,102 @@ async function crossPlatformParseFile(filename: string): Promise<SongTags> {
     }
 }
 
+const appName = "electron-music-player";
+function systemCacheDir(appName: string): string | undefined {
+    if(isWeb) return undefined;
+    switch(os.platform()) {
+        case 'darwin':
+            return path.join(os.homedir(), 'Library', 'Caches', appName);
+        case 'win32':
+            const appData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+            return path.join(appData, appName, 'Cache');
+        case 'aix':
+        case 'android':
+        case 'freebsd':
+        case 'linux':
+        case 'netbsd':
+        case 'openbsd':
+        case 'sunos':
+            const cacheHome = process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
+            return path.join(cacheHome, appName);;
+        default:
+            return undefined;
+    }
+}
+
+function getCacheFileName(ctimeMs: number, filename: string, cachetype: string): string | undefined {
+    const sysCacheDir = systemCacheDir(appName);
+    if(!sysCacheDir) return undefined;
+    const lastUpdateTime = ctimeMs;
+    const fname = path.basename(filename);
+    return path.join(sysCacheDir, fname + "-" + cachetype + "-" + lastUpdateTime+".json");
+}
+
+async function readCache(filename: string): Promise<{cacheinfo?: SongTags; lastWriteTime?: number}> {
+    if(isWeb) return {};
+    const fstat = await fs.promises.stat(filename);
+    const cfname = getCacheFileName(fstat.ctimeMs, filename, "tags");
+    if(!cfname) return {};
+    try {
+        const json = JSON.parse(await fs.promises.readFile(cfname, "utf-8"));
+        return {lastWriteTime: fstat.ctimeMs, cacheinfo: json};
+    }catch(e) {
+        return {lastWriteTime: fstat.ctimeMs};
+    }
+}
+async function writeCache(filename: string, songTags: SongTags, lastWriteTime: number | undefined) {
+    if(isWeb) return;
+    if(!lastWriteTime) lastWriteTime = (await fs.promises.stat(filename)).mtimeMs; // lastWriteTime ??=
+    const cfname = getCacheFileName(lastWriteTime, filename, "tags");
+    if(!cfname) return; // cache files are not supported on this platform
+    try {
+        await fs.promises.writeFile(cfname, JSON.stringify(songTags), "utf-8");
+    }catch(e) {
+        await fs.promises.mkdir(cfname.substring(0, cfname.lastIndexOf("/")), {recursive: true});
+        await fs.promises.writeFile(cfname, JSON.stringify(songTags), "utf-8");
+    }
+}
+
 const readTagsLock = new Mutex();
 async function readTags(filename: string) {
     const unlock = await readTagsLock.lock();
-    let songTags: SongTags;
+    const cache = await readCache(filename);
+    if(cache.cacheinfo) {unlock(); return cache.cacheinfo;}
+    let rawTags: RawSongTags;
     try {
-        songTags = await crossPlatformParseFile(filename);
+        rawTags = await crossPlatformParseFile(filename);
     }catch(e) {
         console.log("Read tags error on ",filename);
         unlock();
         throw e;
     }
     unlock();
-    if (songTags.picture && songTags.picture[0]) {
-        songTags.art = `data:${songTags.picture[0].format};base64,${songTags.picture[0].data.toString("base64")}`;
+    const songTags: SongTags = {
+        lyrics: rawTags.album,
+        artist: rawTags.artist,
+        title: rawTags.title,
+        artdata: undefined,
+        arturl: "ERRORNOTSET" as any,
+    };
+    if (rawTags.picture && rawTags.picture[0]) {
+        const allfmt = rawTags.picture[0].format;
+        songTags.artdata = {fmt: allfmt.substr(allfmt.lastIndexOf("/") + 1), b64: rawTags.picture[0].data.toString("base64")};
         try {
-            const artBuffer = isWeb ? songTags.art : songTags.picture[0].data;
+            const artBuffer = isWeb ? getArtURL(songTags) : rawTags.picture[0].data;
             songTags.color = await getDarkLight(artBuffer);
         }catch(e) {
             // console.log("Failed to load art", e);
-            songTags.color = { dark: Color("#000"), light: Color("#fff") };
+            songTags.color = { dark: "#000", light: "#fff" };
         }
     } else {
-        songTags.art = `img/no_art.png`;
-        songTags.color = { dark: Color("#a00"), light: Color("#fff") };
+        songTags.color = { dark: "#a00", light: "#fff" };
     }
+    songTags.arturl = getArtURL(songTags);
+    try {
+        await writeCache(filename, songTags, cache.lastWriteTime);
+    }catch(e) {
+        console.log("Failed to write cache", e)
+    }  
     return songTags;
 }
 
@@ -1101,12 +1182,12 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
         nowPlayingTitle.nodeValue = song && song.tags ? song.tags.title || "undefined" : "…";
         nowPlayingArtist.nodeValue = song && song.tags ? song.tags.artist || "undefined" : "…";
         nowPlayingFilename.nodeValue = song ? song.filename : "Not Playing";
-        const artsrc = song && song.tags ? song.tags.art || "" : "";
+        const artsrc = song && song.tags ? song.tags.arturl || "" : "";
         if (artEl.src !== artsrc) artEl.src = artsrc;
 
         if (song && song.tags && song.tags.color) {
-            document.documentElement.style.setProperty("--foreground", song.tags.color.light.hex());
-            document.documentElement.style.setProperty("--background", song.tags.color.dark.hex());
+            document.documentElement.style.setProperty("--foreground", song.tags.color.light);
+            document.documentElement.style.setProperty("--background", song.tags.color.dark);
             document.documentElement.style.setProperty("--background2", "#000");
         } else {
             document.documentElement.style.setProperty("--foreground", "#fff");
@@ -1194,7 +1275,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
     const albumArt = el("img")
         .adto(win)
         .clss("lyricsedtr-img")
-        .attr({ src: songtags.art })
+        .attr({ src: songtags.arturl })
         .adto(fylnmehdng);
     fylnmehdng.atxt(song.filename);
 
@@ -1225,10 +1306,9 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             if (imgset) {
                 atchmntnme = "/tmp/" + imgset.egname;
                 fs.writeFileSync(atchmntnme, imgset.buffer);
-            } else if (songtags.picture && songtags.picture[0]) {
-                const fmtval = songtags.picture[0].format;
-                atchmntnme = "/tmp/" + "__CONTINUE." + fmtval.substr(fmtval.lastIndexOf("/") + 1);
-                fs.writeFileSync(atchmntnme, songtags.picture[0].data);
+            } else if (songtags.artdata) {
+                atchmntnme = "/tmp/" + "__CONTINUE." + songtags.artdata.fmt;
+                fs.writeFileSync(atchmntnme, Buffer.from(songtags.artdata.b64, "base64"));
             }
 
             // song.path
@@ -1250,13 +1330,13 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
                     } else {
                         if (song.tags) {
                             song.tags = { ...song.tags };
-                            song.tags.album = txtarya.value;
+                            song.tags.lyrics = txtarya.value;
                             song.tags.title = titlenput.value;
                             song.tags.artist = artistnput.value;
                             if (imgset) {
-                                song.tags.art = imgset.url;
+                                song.tags.artdata = {fmt: imgset.fmt, b64: imgset.buffer.toString("base64")};
+                                song.tags.arturl = getArtURL(song.tags);
                                 song.tags.color = imgset.colors;
-                                song.tags.picture = [{ format: "image/" + imgset.fmt, data: imgset.buffer }];
                             }
                         }
                         defer.cleanup();
@@ -1358,8 +1438,8 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         getDarkLight(isWeb ? srcval : newimg)
         .then(res => {
             albumArt.src = srcval;
-            win.style.setProperty("--background", res.dark.hex());
-            win.style.setProperty("--foreground", res.light.hex());
+            win.style.setProperty("--background", res.dark);
+            win.style.setProperty("--foreground", res.light);
             imgset = {
                 url: srcval,
                 buffer: newimg,
@@ -1387,7 +1467,7 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
         .adto(el("div").clss("h100").adto(col2))
         .attr({ placeholder: "Lyrics..." })
         .clss("lyricsedtr-input.h100")
-        .dwth(v => (v.value = "" + songtags.album));
+        .dwth(v => (v.value = "" + songtags.lyrics));
 }
 
 type LyricResult = {

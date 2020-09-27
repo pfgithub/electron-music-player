@@ -11,7 +11,9 @@ import * as ffmetadata_ from "ffmetadata";
 import * as child_process from "child_process";
 import * as uhtml from "uhtml";
 import * as ipc from "node-ipc";
-import * as notifier from "node-notifier";
+// to fix this error, change config.
+// doing import * as notifier causes this to break so don't.
+import notifier from "node-notifier";
 import fetch from "node-fetch";
 const Lyricist = (window as any)["require"]("lyricist");
 const Genius = (window as any)["require"]("node-genius");
