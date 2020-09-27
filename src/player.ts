@@ -1,6 +1,6 @@
 import "./_stdlib";
 import { child_process, enableIPC, fetch, ffmetadata_, fs, Genius, ipc, isWeb, Lyricist, notifier, os, path, uhtml } from "./crossplatform";
-import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags } from "./cache";
+import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags, realEncodeURI } from "./cache";
 
 function $scss(data: TemplateStringsArray) {
     const styleValue = data[0];
@@ -952,7 +952,14 @@ async function readTags(filename: string) {
     const unlock = await readTagsLock.lock();
     let result: SongTags;
     try {
-        result = await readTagsNoLock(filename);
+        if(isWeb) {
+            const webres = await fetch("/tags"+realEncodeURI(filename));
+            const wrjson = await webres.json();
+            if(wrjson.error) throw new Error("Load fail: "+wrjson.error);
+            result = wrjson.value;
+        }else{
+            result = await readTagsNoLock(filename);
+        }
     }catch(e) {
         unlock();
         throw new Error("Read tags error on "+filename);
@@ -1062,7 +1069,7 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
         update() {
             if (data.nowPlayingUpdated !== prev.nowPlayingUpdated) {
                 prev.nowPlayingUpdated = data.nowPlayingUpdated;
-                elAudio.src = encodeURI(data.nowPlaying ? data.nowPlaying.path || "" : "").replace(/\?/g, "%3F");
+                elAudio.src = realEncodeURI(data.nowPlaying ? data.nowPlaying.path || "" : "");
                 elAudio.play();
             }
             if (

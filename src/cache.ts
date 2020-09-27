@@ -15,6 +15,7 @@ export async function readCache(filename: string): Promise<{cacheinfo?: SongTags
     if(!cfname) return {};
     try {
         const json = JSON.parse(await fs.promises.readFile(cfname, "utf-8"));
+        json.arturl = getArtURL(json);
         return {lastWriteTime: fstat.ctimeMs, cacheinfo: json};
     }catch(e) {
         return {lastWriteTime: fstat.ctimeMs};
@@ -25,11 +26,14 @@ export async function writeCache(filename: string, songTags: SongTags, lastWrite
     if(!lastWriteTime) lastWriteTime = (await fs.promises.stat(filename)).mtimeMs; // lastWriteTime ??=
     const cfname = getCacheFileName(lastWriteTime, filename, "tags");
     if(!cfname) return; // cache files are not supported on this platform
+    const tagsDupe = {...songTags};
+    delete tagsDupe.arturl;
+    const jsond = JSON.stringify(tagsDupe);
     try {
-        await fs.promises.writeFile(cfname, JSON.stringify(songTags), "utf-8");
+        await fs.promises.writeFile(cfname, jsond, "utf-8");
     }catch(e) {
         await fs.promises.mkdir(cfname.substring(0, cfname.lastIndexOf("/")), {recursive: true});
-        await fs.promises.writeFile(cfname, JSON.stringify(songTags), "utf-8");
+        await fs.promises.writeFile(cfname, jsond, "utf-8");
     }
 }
 export type SongTags = {
@@ -95,9 +99,13 @@ export function getArtURL(songTags: SongTags) {
 }
 
 
+export function realEncodeURI(uri: string) {
+    return encodeURI(uri).replace(/[\?#]/g, ([v]) => encodeURIComponent(v));
+}
+
 async function crossPlatformParseFile(filename: string): Promise<SongTags> {
     if(isWeb) {
-        const data = await fetch(encodeURI(filename).replace(/[\?#]/g, ([v]) => encodeURIComponent(v)));
+        const data = await fetch(realEncodeURI(filename));
         const stream = await (data.body as any);
         const parsed = await mm.parseReadableStream(stream, {fileInfo: {path: filename}});
         return parsed.common;
