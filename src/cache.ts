@@ -1,4 +1,4 @@
-import { Color_, fetch, fs, isWeb, mm, os, path, Vibrant } from "./crossplatform";
+import { Color_, fetch, fs, isWeb, mm, os, path, Vibrant } from "./crossplatform_node";
 
 export function getCacheFileName(ctimeMs: number, filename: string, cachetype: string): string | undefined {
     const sysCacheDir = systemCacheDir(appName);

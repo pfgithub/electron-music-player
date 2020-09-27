@@ -11,6 +11,8 @@ module.exports.default = function({ types: t }) {
       ImportDeclaration(path) {
         if(path.node.source.value === "./crossplatform") {
           path.node.source.value = "./crossplatform_web";
+      }else if(path.node.source.value === "./crossplatform_node") {
+          path.node.source.value = "././crossplatform_web";
         }
       }
     }

@@ -12,9 +12,10 @@ gulp.task("all", all);
 
 export async function typescript() {
     // const babelConfig = JSON.parse(fs.readFileSync(".babelrc", "utf-8"));
+    const replacers = {"./crossplatform_web": "./crossplatform", "././crossplatform_web": "./crossplatform_node"};
     const babelConfig = {plugins: [  {visitor: { Program: {enter: () => {},
-        exit: () => {}},ImportDeclaration(path) {if(path.node.source.value === "./crossplatform_web") {
-        path.node.source.value = "./crossplatform";}}}}]
+        exit: () => {}},ImportDeclaration(path) { if(replacers[path.node.source.value])
+            path.node.source.value = replacers[path.node.source.value]}}}]
     };
     return gulp
         .src("src/**/*.ts")
