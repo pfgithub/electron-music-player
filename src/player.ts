@@ -53,7 +53,7 @@ $scss`
 	--background: #000;
 	--background2: #000;
 }
-
+.hidden {display: none;}
 @font-face {
     font-family: 'buttons';
     src: url('font/buttons.eot');
@@ -887,6 +887,10 @@ function listMusicElem(parent: HTMLElement, data: Data) {
         .drmv(defer);
 
     const lis: { sng: MusicData; oli: OneListItem }[] = []; // atm there is no way to remove things so this is fine for now
+    
+    const currentlyLoadingSongs = el("li").adto(songlistul).atxt("Loading ");
+    const clsTn = txt("…").adto(currentlyLoadingSongs);
+    currentlyLoadingSongs.atxt(" more.");
 
     const res = {
         remove() {
@@ -907,7 +911,9 @@ function listMusicElem(parent: HTMLElement, data: Data) {
             prevData.musicUpdated = data.musicUpdated;
             prevData.currentlyPlaying = data.nowPlaying;
 
+            let loadingCount = 0;
             for (const [i, song] of data.music.entries()) {
+                if(!song.tags) loadingCount += 1;
                 if (!lis[i]) {
                     lis[i] = { sng: song, oli: oneListItem(songlistul, data, song) };
                 }
@@ -917,6 +923,8 @@ function listMusicElem(parent: HTMLElement, data: Data) {
                 }
                 lis[i].oli.update();
             }
+            clsTn.nodeValue = "" + loadingCount;
+            currentlyLoadingSongs.classList.toggle("hidden", loadingCount === 0);
         },
     };
     return res;
