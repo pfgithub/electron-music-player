@@ -93,6 +93,7 @@ things that might be done in the future if I ever get too tired of not having th
 - ui improvements, especially for the edit and add pages so they don't look so disorganized.
 - full keyboard control (eg tab+enter works to select things from the list, ctrl+s to save and close the edit screen, escape to cancel, tab works to select the plus button on things, …)
 - option to associate time codes with lyrics (using the edit button) and then the reverse, clicking a lyric to jump to the time code
+- resize images to like at most 128x128 or 256x256 or something so there aren't images that are literally 5mb
 
 things that would be good to do but I probably won't ever need:
 
