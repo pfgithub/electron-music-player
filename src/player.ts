@@ -340,6 +340,7 @@ li:hover .itembuttons {
 }
 textarea.lyricsedtr-input {
     padding: 10px;
+    font-family: sans-serif;
 }
 .lyricsedtr-input {
     width: 100%;
@@ -393,6 +394,15 @@ textarea.lyricsedtr-input {
 }
 .lyrics {
     white-space: pre-wrap;
+}
+
+.cmdpart:hover {
+    color: var(--background);
+    background-color: var(--foreground);
+}
+
+code {
+    user-select: text;
 }
 `;
 
@@ -1499,7 +1509,7 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         onclose();
     };
     
-    type TabName = "youtube" | "file";
+    type TabName = "ytdl" | "file";
     type ExecData = string[];
     const setTab = (tabName: TabName) => {
         data.from.active = tabName;
@@ -1507,8 +1517,8 @@ function songAddPanel(outerData: Data, onclose: () => void) {
     }
     const data = {
         from: {
-            active: "youtube" as TabName,
-            youtube: {videoid: ""},
+            active: "ytdl" as TabName,
+            ytdl: {videoid: ""},
             file: {filepath: ""},
         },
         tempo: "",
@@ -1618,18 +1628,11 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         const missing: string[] = [];
         const rescmd: string[][] = [];
         rescmd.push(["[", "!", "-f", getDistPath(), "]"]);
-        if(data.from.active === "youtube") {
-            let videoid = data.from.youtube.videoid;
-            if(videoid.includes("v=")) {
-                try {
-                    videoid = new URL(videoid).search;
-                }catch(e){
-                    videoid = "";
-                }
-            }
-            const safevideoid = videoid.replace(/[^a-zA-Z0-9\-_]/g, "!");
-            rescmd.push(["youtube-dl", "https://www.youtube.com/watch?v="+safevideoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
-            if(!safevideoid) missing.push("youtube video id");
+        if(data.from.active === "ytdl") {
+            let videoid = data.from.ytdl.videoid;
+            rescmd.push(["youtube-dl", videoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
+            if(!videoid) missing.push("ytdl website");
+            if(videoid.startsWith("-")) missing.push("ytdl website starts with '-'");
         }else if(data.from.active === "file") {
             rescmd.push(["cp", data.from.file.filepath, "dnl0.mp3"]);
             if(!data.from.file.filepath) missing.push("file not chosen");
@@ -1667,12 +1670,13 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         ` : html`
             <h2>File:</h2>
             <div class="tablist">
-                <button class=${"lyricsedtr-button"+(data.from.active === "youtube" ? "" : " unimportant")} onclick=${() => setTab("youtube")}>Youtube</button>
+                <button class=${"lyricsedtr-button"+(data.from.active === "ytdl" ? "" : " unimportant")} onclick=${() => setTab("ytdl")}>youtube-dl</button>
                 <button class=${"lyricsedtr-button"+(data.from.active === "file" ? "" : " unimportant")} onclick=${() => setTab("file")}>Local File</button>
             </div>
-            ${data.from.active === "youtube" ? html`
+            ${data.from.active === "ytdl" ? html`
+                <h2>Website:</h2>
                 <div>
-                    <label>watch?v=<input type="text" class="lyricsedtr-input" style="width: auto;" value=${data.from.youtube.videoid} oninput=${(e: any) => {data.from.youtube.videoid = e.currentTarget.value; rerender();}} /></label>
+                    <input type="text" placeholder="https://…" class="lyricsedtr-input" value=${data.from.ytdl.videoid} oninput=${(e: any) => {data.from.ytdl.videoid = e.currentTarget.value; rerender();}} />
                 </div>
             ` : data.from.active === "file" ? html`
                 <div>
@@ -1701,12 +1705,6 @@ function songAddPanel(outerData: Data, onclose: () => void) {
     };
 
     rerender();
-
-    // - list of songAddItems
-    // - filename field
-    // - youtube link field
-    // - 2x checkbox
-    // - go button (disables everything else)
 
     const res = {
         render() {
