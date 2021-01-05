@@ -8,3 +8,5 @@ musicplayer.socket
 .cache/
 .parcel-cache/
 dist_web/
+
+webdemo/

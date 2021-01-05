@@ -2,6 +2,8 @@ import "./_stdlib";
 import { child_process, enableIPC, fetch, ffmetadata_, fs, Genius, ipc, isWeb, Lyricist, notifier, os, path, uhtml } from "./crossplatform";
 import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags, realEncodeURI } from "./cache";
 
+console.log("IMPORT SUCCEEDED!", uhtml, config, realEncodeURI, getDarkLight, readTagsNoLock);
+
 function $scss(data: TemplateStringsArray) {
     const styleValue = data[0];
     const styleElem = document.createElement("style");
@@ -510,17 +512,15 @@ function MusicPlayer(mount: HTMLElement) {
                 return;
             } //workaround for circular symlinks
             if(isWeb) {
-                if(musicPath.endsWith("/")) {
+                if(musicPath.endsWith(".mp3")){
+                    // do nothing
+                }else{
                     fetch(musicPath, {headers: {"Accept": "application/json"}})
                     .then(a => a.json())
                     .then((list: string[]) => {
-                        list.forEach(subpath => data.addMusic(musicPath + subpath), depth + 1);
+                        list.forEach(subpath => data.addMusic(musicPath + "/" + subpath), depth + 1);
                     });
                     return;
-                }else if(musicPath.endsWith(".mp3")){
-                    
-                }else{
-                    console.log("Unknown file ",{path: musicPath});
                 }
             } else {
                 const lstat = fs.statSync(musicPath);

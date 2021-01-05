@@ -1,6 +1,6 @@
 import { Color_, fetch, fs, isWeb, mm, os, path, Vibrant } from "./crossplatform_node";
 
-export function getCacheFileName(ctimeMs: number, filename: string, cachetype: string): string | undefined {
+function getCacheFileName(ctimeMs: number, filename: string, cachetype: string): string | undefined {
     const sysCacheDir = systemCacheDir(appName);
     if(!sysCacheDir) return undefined;
     const lastUpdateTime = ctimeMs;
@@ -8,7 +8,7 @@ export function getCacheFileName(ctimeMs: number, filename: string, cachetype: s
     return path.join(sysCacheDir, fname + "-" + cachetype + "-" + lastUpdateTime+".json");
 }
 
-export async function readCache(filename: string): Promise<{cacheinfo?: SongTags; lastWriteTime?: number}> {
+async function readCache(filename: string): Promise<{cacheinfo?: SongTags; lastWriteTime?: number}> {
     if(isWeb) return {};
     const fstat = await fs.promises.stat(filename);
     const cfname = getCacheFileName(fstat.ctimeMs, filename, "tags");
@@ -21,7 +21,7 @@ export async function readCache(filename: string): Promise<{cacheinfo?: SongTags
         return {lastWriteTime: fstat.ctimeMs};
     }
 }
-export async function writeCache(filename: string, songTags: SongTags, lastWriteTime: number | undefined) {
+async function writeCache(filename: string, songTags: SongTags, lastWriteTime: number | undefined) {
     if(isWeb) return;
     if(!lastWriteTime) lastWriteTime = (await fs.promises.stat(filename)).mtimeMs; // lastWriteTime ??=
     const cfname = getCacheFileName(lastWriteTime, filename, "tags");
@@ -55,7 +55,7 @@ export type ColorProperty = {
     light: string;
 };
 
-export async function readTagsNoLock(filename: string) {
+async function readTagsNoLock(filename: string) {
     const cache = await readCache(filename);
     if(cache.cacheinfo) return cache.cacheinfo;
     let rawTags: RawSongTags;
@@ -93,13 +93,13 @@ export async function readTagsNoLock(filename: string) {
     }  
     return songTags;
 }
-export function getArtURL(songTags: SongTags) {
+function getArtURL(songTags: SongTags) {
     if(!songTags.artdata) return "img/no_art.png";
     return "data:image/"+songTags.artdata.fmt+";base64,"+songTags.artdata.b64;
 }
 
 
-export function realEncodeURI(uri: string) {
+function realEncodeURI(uri: string) {
     return encodeURI(uri).replace(/[\?#]/g, ([v]) => encodeURIComponent(v));
 }
 
@@ -115,8 +115,8 @@ async function crossPlatformParseFile(filename: string): Promise<SongTags> {
     }
 }
 
-export const appName = "electron-music-player";
-export function systemCacheDir(appName: string): string | undefined {
+const appName = "electron-music-player";
+function systemCacheDir(appName: string): string | undefined {
     if(isWeb) return undefined;
     switch(os.platform()) {
         case 'darwin':
@@ -137,7 +137,7 @@ export function systemCacheDir(appName: string): string | undefined {
             return undefined;
     }
 }
-export async function getDarkLight(imgbuffer: string | Buffer): Promise<ColorProperty> {
+async function getDarkLight(imgbuffer: string | Buffer): Promise<ColorProperty> {
     const vibrant = Vibrant.from(imgbuffer);
     const swatches = await vibrant.getSwatches();
 
@@ -163,10 +163,12 @@ type Color = {
 const Color: (hex: string) => Color = Color_;
 
 
-export const config = {
+const config = {
     minContrast: 5.0,
     constrastStepChange: 0.25, // How quickly to change background and foreground colors when fixing contrast,
     lightMode: false,
     updateSpeedLimit: 1000, // Minimum ms allowed between each update of the music list. Higher means songs update in larger groups.
     maxMusicSearchDepth: 10, // Max search depth of folders in music added
 };
+
+export {config, getArtURL, getDarkLight, readTagsNoLock, realEncodeURI };
