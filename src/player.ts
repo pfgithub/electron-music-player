@@ -1,6 +1,7 @@
 import "./_stdlib";
 import { child_process, enableIPC, fetch, ffmetadata_, fs, Genius, ipc, isWeb, Lyricist, notifier, os, path, uhtml } from "./crossplatform";
 import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags, realEncodeURI } from "./cache";
+import { assert } from "console";
 
 console.log("IMPORT SUCCEEDED!", uhtml, config, realEncodeURI, getDarkLight, readTagsNoLock);
 
@@ -588,6 +589,7 @@ function MusicPlayer(mount: HTMLElement) {
             ipc.server.on("connect", () => {});
             ipc.server.on("message", (ipcmsg, socket) => {
                 console.log("IPC Message: ", ipcmsg);
+                const mstr = (musc: MusicData) => musc.tags ? (musc.tags.artist + " - " + musc.tags.title) : musc.filename;
                 if(ipcmsg === "next") {
                     data.play = true;
                     data.addQueue(1);
@@ -613,13 +615,33 @@ function MusicPlayer(mount: HTMLElement) {
                     songlistqueuefiltered.checked = true;
                 }else if(ipcmsg === "randomfilteroff") {
                     songlistqueuefiltered.checked = false;
+                }else if(ipcmsg === "listall") {
+                    ipc.server.emit(socket, "message", {notice: "handled", results: data.music.map(mstr)});
+                    return;
+                }else if(ipcmsg === "listqueue") {
+                    ipc.server.emit(socket, "message", {notice: "handled", results: queue
+                        .filter((a, i) => i > queueIndex - 8)
+                        .map(m => m ? mstr(m) : "undefined")
+                    });
+                    return;
+                }else if(Array.isArray(ipcmsg) && (ipcmsg[0] === "playsong" || ipcmsg[0] === "queue")) {
+                    const songv = "" + ipcmsg[1];
+                    const found = data.music.find(v => mstr(v) === songv || v.filename === songv);
+                    if(!found) {
+                        ipc.server.emit(socket, "message", {notice: "bad request"});
+                        notifier.notify({message: "Not Found Song, "+("" + songv), title: "Musicplayer"});
+                        return;
+                    }
+                    if(ipcmsg[0] === "playsong") data.queueImmediate(found);
+                    else if(ipcmsg[0] === "playsong") data.queueFinal(found);
+                    else assertNever(ipcmsg[0] as never); // shh I didn't want to do the ts is thing
                 }else{
                     console.log("bad ipc", ipcmsg);
-                    ipc.server.emit(socket, "message", "bad request");
+                    ipc.server.emit(socket, "message", {notice: "bad request"});
                     notifier.notify({message: "Bad IPC, "+("" + ipcmsg), title: "Musicplayer"});
                     return;
                 }
-                ipc.server.emit(socket, "message", "handled");
+                ipc.server.emit(socket, "message", {notice: "handled"});
             });
         });
         ipc.server.start();

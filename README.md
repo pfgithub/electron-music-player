@@ -75,6 +75,12 @@ command can be any of: `playpuase`, `next`, `prev`, `play`, `pause`, `randomfilt
 
 I have scroll lock/pause break bound to prev/next, page up bound to playpause, and page down bound to randomfiltertoggle.
 
+Additionally, there is `musicplayer-msg listall/listqueue/playsong/queue`. Usage example (fish shell + rofi command)
+
+`node …/src/ipc.js playsong (node …/src/ipc.js listall | rofi -dmenu -i)`
+
+`node …/src/ipc.js queue (node …/src/ipc.js listall | rofi -dmenu -i)`
+
 ## Contributing
 
 Use `yarn build-watch` to automatically build when you change a file. Use an editor plugin to see typescript errors (also don't use atom because it will run at <15fps)
