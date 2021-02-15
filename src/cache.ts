@@ -116,7 +116,7 @@ async function crossPlatformParseFile(filename: string): Promise<SongTags> {
 }
 
 const appName = "electron-music-player";
-function systemCacheDir(appName: string): string | undefined {
+export function systemCacheDir(appName: string): string | undefined {
     if(isWeb) return undefined;
     switch(os.platform()) {
         case 'darwin':

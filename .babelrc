@@ -3,6 +3,7 @@
 		"@babel/preset-typescript",
 		["env", {
 			"targets": {
+				"node": "12",
 				"browsers": ">10%"
 			}
 		}]

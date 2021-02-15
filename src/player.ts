@@ -1,6 +1,6 @@
 import "./_stdlib";
 import { child_process, enableIPC, fetch, ffmetadata_, fs, Genius, ipc, isWeb, Lyricist, notifier, os, path, uhtml } from "./crossplatform";
-import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags, realEncodeURI } from "./cache";
+import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags, realEncodeURI, systemCacheDir } from "./cache";
 import { assert } from "console";
 
 console.log("IMPORT SUCCEEDED!", uhtml, config, realEncodeURI, getDarkLight, readTagsNoLock);
@@ -423,6 +423,40 @@ type MusicData = {
     tags: SongTags | undefined;
 };
 
+type Action =
+    | {kind: "queue_end"; song: MusicData}
+    | {kind: "queue_immediate"; song: MusicData}
+    | {kind: "play"; set: true | "toggle" | false}
+    | {kind: "automatic_next"}
+    | {kind: "skip_back"}
+    | {kind: "skip_fwd"}
+    | {kind: "random_filter"; set: true | "toggle" | false}
+    | {kind: "update_music_array"}
+;
+
+type BaseLogAction = {time: number};
+type PlayLogAction = {opt: "start-playing"; next_song: {name: string}; previous_song: {name: string; timestamp: number}};
+type LogAction = (
+    | {kind: "queue_end"; song: {name: string}}
+    | {kind: "queue_immediate"} & PlayLogAction
+    | {kind: "play"}
+    | {kind: "pause"}
+    | {kind: "automatic_next"; random_filter: string | null} & PlayLogAction
+    | {kind: "skip_back"} & PlayLogAction
+    | {kind: "skip_fwd"} & PlayLogAction
+);
+type OutLogAction = BaseLogAction & LogAction;
+
+function writeLog(action: LogAction) {
+    const outa: OutLogAction = {time: Date.now(), ...action};
+    if(!isWeb) (async () => {
+        const cache_dir = systemCacheDir("electron-music-player") + "/logs/";
+        const log_path = cache_dir + "log.log";
+        await fs.promises.mkdir(cache_dir, {recursive: true});
+        await fs.promises.appendFile(log_path, JSON.stringify(outa) + "\n", "utf-8");
+    })();
+}
+
 function MusicPlayer(mount: HTMLElement) {
     const defer = makeDefer();
 
@@ -474,7 +508,7 @@ function MusicPlayer(mount: HTMLElement) {
         return randomOfArray(data.music);
     }
 
-    function setQueueIndex(envy: number) {
+    function setQueueIndexInternal(envy: number) {
         queueIndex = envy;
         while (queueIndex < 0) {
             queue.unshift(undefined);
@@ -483,7 +517,79 @@ function MusicPlayer(mount: HTMLElement) {
         if (!queue[queueIndex]) queue[queueIndex] = getRandomSong();
         data.nowPlaying = queue[queueIndex];
         data.nowPlayingUpdated += 1;
-        data.update();
+    }
+
+    function getSongNT(): {name: string; timestamp: number} {
+        return {name: queue[queueIndex]?.filename ?? "", timestamp: data.elAudio?.currentTime ?? -1};
+    }
+
+    function performAction(action: Action) {
+        if(action.kind === "queue_immediate") {
+            const previous_song = getSongNT();
+            queue.push(action.song);
+            data.play = true;
+            setQueueIndexInternal(queue.length - 1);
+            internalUpdate();
+            writeLog({kind: "queue_immediate", opt: "start-playing",
+                previous_song,
+                next_song: {name: action.song.filename},
+            });
+        }else if(action.kind === "queue_end") {
+            queue.push(action.song);
+            internalUpdate();
+            writeLog({kind: "queue_end",
+                song: {name: action.song.filename},
+            });
+        }else if(action.kind === "automatic_next") {
+            const previous_song = getSongNT();
+            data.play = true;
+            setQueueIndexInternal(queueIndex + 1);
+            internalUpdate();
+            writeLog({kind: "automatic_next", opt: "start-playing",
+                previous_song,
+                next_song: {name: getSongNT().name},
+                random_filter: songlistqueuefiltered.checked ? data.filter : null,
+            });
+        }else if(action.kind === "skip_fwd") {
+            const previous_song = getSongNT();
+            data.play = true;
+            setQueueIndexInternal(queueIndex + 1);
+            internalUpdate();
+            writeLog({kind: "skip_fwd", opt: "start-playing",
+                previous_song,
+                next_song: {name: getSongNT().name},
+            });
+        }else if(action.kind === "skip_back") {
+            const previous_song = getSongNT();
+            data.play = true;
+            setQueueIndexInternal(queueIndex - 1);
+            internalUpdate();
+            writeLog({kind: "skip_back", opt: "start-playing",
+                previous_song,
+                next_song: {name: getSongNT().name},
+            });
+        }else if(action.kind === "play") {
+            data.play = action.set === "toggle" ? !data.play : action.set;
+            internalUpdate();
+            writeLog({kind: data.play ? "play" : "pause"});
+        }else if(action.kind === "random_filter") {
+            songlistqueuefiltered.checked = action.set === "toggle" ? !songlistqueuefiltered.checked : action.set;
+        }else if(action.kind === "update_music_array") {
+            data.musicUpdated++;
+            internalUpdate();
+        }else assertNever(action);
+    }
+
+    function internalUpdate() {
+        musiclist.update();
+        nowplaying.update();
+        lyricview.update();
+        if (data.filter !== prevData.filter) {
+            prevData.filter = data.filter;
+        }
+        const song = data.nowPlaying;
+        const artsrc = song && song.tags ? song.tags.arturl || "" : "";
+        if (fsimg.src !== artsrc) fsimg.src = artsrc;
     }
 
     const data: Data = {
@@ -494,23 +600,8 @@ function MusicPlayer(mount: HTMLElement) {
         nowPlaying: undefined,
         nowPlayingUpdated: 1,
         elAudio: undefined,
+        performAction,
 
-        queueImmediate(song: MusicData) {
-            queue.push(song);
-            data.play = true;
-            setQueueIndex(queue.length - 1);
-        },
-        queueFinal(song: MusicData) {
-            queue.push(song);
-            data.update();
-        },
-        addQueue(diff: number) {
-            setQueueIndex(queueIndex + diff);
-        },
-        playNext() {
-            data.play = true;
-            setQueueIndex(queueIndex + 1);
-        },
         addRootMusic(): void {
             if(isWeb) {
                 data.addMusic("/music/");
@@ -556,24 +647,11 @@ function MusicPlayer(mount: HTMLElement) {
             };
             readTags(song.path).then(tags => {
                 song.tags = tags;
-                data.musicUpdated++;
-                data.update();
+                data.performAction({kind: "update_music_array"});
             });
 
             data.music.push(song);
-            data.musicUpdated++;
-            data.update();
-        },
-        update() {
-            musiclist.update();
-            nowplaying.update();
-            lyricview.update();
-            if (data.filter !== prevData.filter) {
-                prevData.filter = data.filter;
-            }
-            const song = data.nowPlaying;
-            const artsrc = song && song.tags ? song.tags.arturl || "" : "";
-            if (fsimg.src !== artsrc) fsimg.src = artsrc;
+            data.performAction({kind: "update_music_array"});
         },
     };
     const prevData = {
@@ -591,30 +669,25 @@ function MusicPlayer(mount: HTMLElement) {
                 console.log("IPC Message: ", ipcmsg);
                 const mstr = (musc: MusicData) => musc.tags ? (musc.tags.artist + " - " + musc.tags.title) : musc.filename;
                 if(ipcmsg === "next") {
-                    data.play = true;
-                    data.addQueue(1);
+                    performAction({kind: "skip_fwd"});
                     notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
                 }else if(ipcmsg === "prev") {
-                    data.play = true;
-                    data.addQueue(-1);
+                    performAction({kind: "skip_back"});
                     notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
                 }else if(ipcmsg === "play") {
-                    data.play = true;
-                    data.update();
+                    performAction({kind: "play", set: true});
                 }else if(ipcmsg === "pause") {
-                    data.play = false;
-                    data.update();
+                    performAction({kind: "play", set: false});
                 }else if(ipcmsg === "playpause") {
-                    data.play =! data.play;
-                    data.update();
+                    performAction({kind: "play", set: "toggle"});
                     notifier.notify({message: data.play ? "Playing" : "Pausing", timeout: 0.5, title: "Musicplayer"});
                 }else if(ipcmsg === "randomfiltertoggle") {
-                    songlistqueuefiltered.checked =! songlistqueuefiltered.checked;
+                    performAction({kind: "random_filter", set: "toggle"});
                     notifier.notify({message: songlistqueuefiltered.checked ? "Filter On" : "Filter Off", timeout: 0.5, title: "Musicplayer"});
                 }else if(ipcmsg === "randomfilteron") {
-                    songlistqueuefiltered.checked = true;
+                    performAction({kind: "random_filter", set: true});
                 }else if(ipcmsg === "randomfilteroff") {
-                    songlistqueuefiltered.checked = false;
+                    performAction({kind: "random_filter", set: false});
                 }else if(ipcmsg === "listall") {
                     ipc.server.emit(socket, "message", {notice: "handled", results: data.music.map(mstr)});
                     return;
@@ -625,6 +698,7 @@ function MusicPlayer(mount: HTMLElement) {
                     });
                     return;
                 }else if(Array.isArray(ipcmsg) && (ipcmsg[0] === "playsong" || ipcmsg[0] === "queue")) {
+                    const ipcmsg0 = ipcmsg[0] as "playsong" | "queue";
                     const songv = "" + ipcmsg[1];
                     const found = data.music.find(v => mstr(v) === songv || v.filename === songv);
                     if(!found) {
@@ -632,9 +706,9 @@ function MusicPlayer(mount: HTMLElement) {
                         notifier.notify({message: "Not Found Song, "+("" + songv), title: "Musicplayer"});
                         return;
                     }
-                    if(ipcmsg[0] === "playsong") data.queueImmediate(found);
-                    else if(ipcmsg[0] === "playsong") data.queueFinal(found);
-                    else assertNever(ipcmsg[0] as never); // shh I didn't want to do the ts is thing
+                    if(ipcmsg0 === "playsong") data.performAction({kind: "queue_immediate", song: found});
+                    else if(ipcmsg0 === "queue") data.performAction({kind: "queue_end", song: found});
+                    else assertNever(ipcmsg0);
                 }else{
                     console.log("bad ipc", ipcmsg);
                     ipc.server.emit(socket, "message", {notice: "bad request"});
@@ -651,7 +725,7 @@ function MusicPlayer(mount: HTMLElement) {
     const nowplaying = nowPlayingElem(nowPlayingBar, data);
     const lyricview = lyricViewElem(songlyricscol, data);
 
-    data.update();
+    internalUpdate();
 
     let addPanelVisible = false;
     songlistaddbtn.onev("click", () => {
@@ -664,13 +738,15 @@ function MusicPlayer(mount: HTMLElement) {
 
     songlistsearch.onev("input", () => {
         data.filter = songlistsearch.value;
-        data.update();
+        internalUpdate();
     });
 
     return data;
 }
 
 type Data = {
+    // todo
+    // readonly play: boolean
     play: boolean;
     filter: string;
     music: MusicData[];
@@ -679,13 +755,10 @@ type Data = {
     nowPlayingUpdated: number;
     elAudio: HTMLAudioElement | undefined;
 
-    queueImmediate(song: MusicData): void;
-    queueFinal(song: MusicData): void;
-    playNext(): void;
+    performAction(action: Action): void;
+
     addRootMusic(): void;
     addMusic(musicPath: string, depth?: number): void;
-    update(): void;
-    addQueue(diff: number): void;
 };
 
 function lyricViewElem(parent: HTMLElement, data: Data) {
@@ -726,8 +799,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
         lyricsEditorVisible = true;
         showLyricsEditor(data.nowPlaying, data.nowPlaying.tags, () => {
             lyricsEditorVisible = false;
-            data.musicUpdated += 1; // in case of save
-            data.update();
+            data.performAction({kind: "update_music_array"});
         });
     });
     timeButton.onev("click", () => {
@@ -790,7 +862,7 @@ function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneList
         .attr({ role: "button", tabindex: "0" })
         .onev("click", e => {
             e.stopPropagation();
-            data.queueImmediate(song);
+            data.performAction({kind: "queue_immediate", song});
         })
         .adto(ul);
 
@@ -809,7 +881,7 @@ function oneListItem(ul: HTMLUListElement, data: Data, song: MusicData): OneList
         .attr({ title: "queue" })
         .onev("click", e => {
             e.stopPropagation();
-            data.queueFinal(song);
+            data.performAction({kind: "queue_end", song});
             spawnParticle(e.clientX, e.clientY, "+");
         });
 
@@ -1003,7 +1075,7 @@ async function readTags(filename: string) {
 // load music
 
 musicPlayer.addRootMusic();
-musicPlayer.playNext();
+musicPlayer.performAction({kind: "automatic_next"});
 
 function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
     const defer = makeDefer();
@@ -1127,27 +1199,23 @@ function nowPlayingElem(nowPlayingBar: HTMLElement, data: Data) {
     };
     btnPlaypause.onev("click", e => {
         e.stopPropagation();
-        data.play = !data.play;
-        data.update();
+        data.performAction({kind: "play", set: "toggle"});
     });
 
     elAudio.onev("ended", () => {
-        data.play = true;
-        data.addQueue(1);
+        data.performAction({kind: "automatic_next"});
     });
     elAudio.onev("pause", () => {data.play = false;});
     elAudio.onev("play", () => {data.play = true;});
 
     btnNext.addEventListener("click", (e /*: MouseEvent*/) => {
         e.stopPropagation();
-        data.play = true;
-        data.addQueue(1);
+        data.performAction({kind: "skip_fwd"});
     });
-
+    
     btnPrev.addEventListener("click", (e /*: MouseEvent*/) => {
         e.stopPropagation();
-        data.play = true;
-        data.addQueue(-1);
+        data.performAction({kind: "skip_back"});
     });
 
     return res;

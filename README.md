@@ -96,6 +96,7 @@ need to create new windows or adjust hotkeys.
 
 things that might be done in the future if I ever get too tired of not having them:
 
+-   switch to webpack because the current build process is a mess
 -   option to load album art from a local file
 -   option to load album art from the clipboard
 -   sort the sidebar
