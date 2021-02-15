@@ -443,7 +443,7 @@ type LogAction = (
     | {kind: "pause"}
     | {kind: "automatic_next"; random_filter: string | null} & PlayLogAction
     | {kind: "skip_back"} & PlayLogAction
-    | {kind: "skip_fwd"} & PlayLogAction
+    | {kind: "skip_fwd"; random_filter: string | null} & PlayLogAction
 );
 type OutLogAction = BaseLogAction & LogAction;
 
@@ -558,6 +558,7 @@ function MusicPlayer(mount: HTMLElement) {
             writeLog({kind: "skip_fwd", opt: "start-playing",
                 previous_song,
                 next_song: {name: getSongNT().name},
+                random_filter: songlistqueuefiltered.checked ? data.filter : null,
             });
         }else if(action.kind === "skip_back") {
             const previous_song = getSongNT();
