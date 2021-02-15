@@ -435,7 +435,7 @@ type Action =
 ;
 
 type BaseLogAction = {time: number};
-type PlayLogAction = {opt: "start-playing"; next_song: {name: string}; previous_song: {name: string; timestamp: number}};
+type PlayLogAction = {opt: "start-playing"; next_song: {name: string}; previous_song: {name: string; timestamp: number; max_timestamp: number}};
 type LogAction = (
     | {kind: "queue_end"; song: {name: string}}
     | {kind: "queue_immediate"} & PlayLogAction
@@ -519,8 +519,8 @@ function MusicPlayer(mount: HTMLElement) {
         data.nowPlayingUpdated += 1;
     }
 
-    function getSongNT(): {name: string; timestamp: number} {
-        return {name: queue[queueIndex]?.filename ?? "", timestamp: data.elAudio?.currentTime ?? -1};
+    function getSongNT(): {name: string; timestamp: number; max_timestamp: number} {
+        return {name: queue[queueIndex]?.filename ?? "", timestamp: data.elAudio?.currentTime ?? -1, max_timestamp: data.elAudio?.duration ?? -1};
     }
 
     function performAction(action: Action) {
