@@ -444,6 +444,7 @@ type LogAction = (
     | {kind: "automatic_next"; random_filter: string | null} & PlayLogAction
     | {kind: "skip_back"} & PlayLogAction
     | {kind: "skip_fwd"; random_filter: string | null} & PlayLogAction
+    | {kind: "update_song_meta", song: {name: string}, meta_prev: {lyrics: string, title: string, artist: string}, meta_next: {lyrics: string, title: string, artist: string}}
 );
 type OutLogAction = BaseLogAction & LogAction;
 
@@ -668,7 +669,7 @@ function MusicPlayer(mount: HTMLElement) {
             ipc.server.on("connect", () => {});
             ipc.server.on("message", (ipcmsg, socket) => {
                 console.log("IPC Message: ", ipcmsg);
-                const mstr = (musc: MusicData) => musc.tags ? (musc.tags.artist + " - " + musc.tags.title) : musc.filename;
+                const mstr = (musc: MusicData) => musc.tags?.artist && musc.tags?.title ? (musc.tags.artist + " - " + musc.tags.title) : musc.filename;
                 if(ipcmsg === "next") {
                     performAction({kind: "skip_fwd"});
                     notifier.notify({message: data.nowPlaying ? data.nowPlaying.filename : "Nothing", title: "Musicplayer"});
@@ -1268,6 +1269,11 @@ function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => vo
             btncancel.disabled = true;
             btnsave.disabled = true;
             btnsave.textContent = "Saving...";
+            writeLog({kind: "update_song_meta",
+                song: {name: song.path},
+                meta_prev: {lyrics: song.tags?.lyrics ?? "undefined", title: song.tags?.title ?? "undefined", artist: song.tags?.artist ?? "undefined"},
+                meta_next: {lyrics: txtarya.value, title: titlenput.value, artist: artistnput.value}
+            });
 
             let atchmntnme = "";
             if (imgset) {
