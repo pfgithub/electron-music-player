@@ -1,9 +1,10 @@
 const ipc = require("node-ipc");
 
 let msg = process.argv[2] ?? "";
+const msgin = msg;
 
 // fish -c "node src/ipc.js playsong (node src/ipc.js listall | rofi -dmenu -i)"
-if(msg === "playsong" || msg === "queue") {
+if(msg === "playsong" || msg === "queue" || msg === "setnextmode") {
     if(process.argv.length !== 4) {
         console.error("Usage: "+process.argv[0]+" "+process.argv[1]+" playsong 'song value'");
         process.exit(1);
@@ -23,7 +24,8 @@ ipc.connectTo("music", __dirname+"/../musicplayer.socket", () => {
     ipc.of.music.emit("message", msg, () => console.log("oi"));
     ipc.of.music.on("message", (msg) => {
         if(msg.results) {
-            console.log(msg.results.join("\n"));
+            if(msgin === "listnextmodes") console.log(msg.results.map(v => v[0]).join("\n"))
+            else console.log(msg.results.join("\n"));
         } else {
             console.log("Sent!");
         }

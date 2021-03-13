@@ -1,7 +1,6 @@
 import "./_stdlib";
 import { child_process, enableIPC, fetch, ffmetadata_, fs, Genius, ipc, isWeb, Lyricist, notifier, os, path, uhtml } from "./crossplatform";
 import { ColorProperty, config, getArtURL, getDarkLight, readTagsNoLock, SongTags, realEncodeURI, systemCacheDir } from "./cache";
-import { assert } from "console";
 
 console.log("IMPORT SUCCEEDED!", uhtml, config, realEncodeURI, getDarkLight, readTagsNoLock);
 
@@ -430,7 +429,7 @@ type Action =
     | {kind: "automatic_next"}
     | {kind: "skip_back"}
     | {kind: "skip_fwd"}
-    | {kind: "random_filter"; set: true | "toggle" | false}
+    | {kind: "next_mode"; set: NextOpsID}
     | {kind: "update_music_array"}
 ;
 
@@ -441,10 +440,10 @@ type LogAction = (
     | {kind: "queue_immediate"} & PlayLogAction
     | {kind: "play"}
     | {kind: "pause"}
-    | {kind: "automatic_next"; random_filter: string | null} & PlayLogAction
+    | {kind: "automatic_next_2"; mode: NextOpsID; random_filter: string} & PlayLogAction
     | {kind: "skip_back"} & PlayLogAction
-    | {kind: "skip_fwd"; random_filter: string | null} & PlayLogAction
-    | {kind: "update_song_meta", song: {name: string}, meta_prev: {lyrics: string, title: string, artist: string}, meta_next: {lyrics: string, title: string, artist: string}}
+    | {kind: "skip_fwd_2"; mode: NextOpsID; random_filter: string} & PlayLogAction
+    | {kind: "update_song_meta"; song: {name: string}; meta_prev: {lyrics: string; title: string; artist: string}; meta_next: {lyrics: string; title: string; artist: string}}
 );
 type OutLogAction = BaseLogAction & LogAction;
 
@@ -458,6 +457,8 @@ function writeLog(action: LogAction) {
     })();
 }
 
+const nextopts = [["Random", "random"], ["Random (Filtered)", "random_filter"], ["Loop", "loop"], ["End", "end"]] as const;
+type NextOpsID = (typeof nextopts)[number][1];
 function MusicPlayer(mount: HTMLElement) {
     const defer = makeDefer();
 
@@ -491,11 +492,9 @@ function MusicPlayer(mount: HTMLElement) {
         .clss(".lyricsedtr-button.unimportant")
         .adto(songlistbuttonrow)
         .atxt("+ Add");
-    const rflabel = el("label").clss(".random_filter").adto(songlistbuttonrow);
-    const songlistqueuefiltered = el("input")
-        .attr({type: "checkbox"})
-        .adto(rflabel);
-    rflabel.atxt("Random Filter");
+    const nextmode = el("select").clss(".random_filter").adto(songlistbuttonrow)
+        .adch(...nextopts.map(([name, id]) => el("option").attr({value: id}).atxt(name)))
+    ;
     const songlyricscol = el("div")
         .clss(".column.vgrid")
         .adto(cols);
@@ -503,19 +502,59 @@ function MusicPlayer(mount: HTMLElement) {
     const queue: (MusicData | undefined)[] = [];
     let queueIndex = 0;
 
-    function getRandomSong() {
-        if(songlistqueuefiltered.checked)
-            return randomOfArray(data.music.filter(song => playlistFilter(song, data.filter)));
-        return randomOfArray(data.music);
-    }
+    // function setQueueIndexInternal(envy: number) {
+    //     const nxtmode = nextmode.value as NextOpsID;
+    //     let pqueueIndex = queueIndex;
+    //     queueIndex = envy;
+    //     if(nxtmode === "loop" && !queue[queueIndex]) {
+    //         pqueueIndex = 0;
+    //         data.nowPlayingUpdated += 1;
+    //         return;
+    //     }
+    //     while (queueIndex < 0) {
+    //         queue.unshift(undefined);
+    //         queueIndex += 1;
+    //     }
+    //     if (!queue[queueIndex]) {
+    //         if(nxtmode === "random") {
+    //             queue[queueIndex] = randomOfArray(data.music);
+    //         }else if(nxtmode === "random_filter") {
+    //             queue[queueIndex] = randomOfArray(data.music.filter(song => playlistFilter(song, data.filter)));
+    //         }else if(nxtmode === "loop") {
+    //             assertNever(0 as never);
+    //         }else if(nxtmode === "end") {
+    //             data.nowPlaying = undefined;
+    //             return;
+    //         }else assertNever(nxtmode);
+    //     }
+    //     data.nowPlaying = queue[queueIndex];
+    //     data.nowPlayingUpdated += 1;
+    // }
 
-    function setQueueIndexInternal(envy: number) {
-        queueIndex = envy;
-        while (queueIndex < 0) {
-            queue.unshift(undefined);
-            queueIndex += 1;
+    function internalPlayNext() {
+        const nxtmode = nextmode.value as NextOpsID;
+        queueIndex += 1;
+        if(!queue[queueIndex]) {
+            if(nxtmode === "random") {
+                queue[queueIndex] = randomOfArray(data.music);
+            }else if(nxtmode === "random_filter") {
+                queue[queueIndex] = randomOfArray(data.music.filter(song => playlistFilter(song, data.filter)));
+            }else if(nxtmode === "loop") {
+                queueIndex -= 1;
+            }else if(nxtmode === "end") {
+                // *do not* set queue[queueIndex] = undefined
+                // instead, leave an empty slot so .push will replace it
+            }else assertNever(nxtmode);
         }
-        if (!queue[queueIndex]) queue[queueIndex] = getRandomSong();
+        // don't have [«song», , ] in the list. max [«song», ].
+        if(!queue[queueIndex] && !queue[queueIndex - 1]) queueIndex -= 1;
+        data.nowPlaying = queue[queueIndex];
+        data.nowPlayingUpdated += 1;
+    }
+    function internalPlayPrev() {
+        queueIndex -= 1;
+        if(queueIndex < 0) queueIndex = 0; // the zeroth item in the queue will always be undefined. why? I have no idea that would be good to look into and ¿fix?
+
         data.nowPlaying = queue[queueIndex];
         data.nowPlayingUpdated += 1;
     }
@@ -529,7 +568,11 @@ function MusicPlayer(mount: HTMLElement) {
             const previous_song = getSongNT();
             queue.push(action.song);
             data.play = true;
-            setQueueIndexInternal(queue.length - 1);
+            
+            queueIndex = queue.length - 1;
+            data.nowPlaying = queue[queueIndex];
+            data.nowPlayingUpdated += 1;
+
             internalUpdate();
             writeLog({kind: "queue_immediate", opt: "start-playing",
                 previous_song,
@@ -544,27 +587,29 @@ function MusicPlayer(mount: HTMLElement) {
         }else if(action.kind === "automatic_next") {
             const previous_song = getSongNT();
             data.play = true;
-            setQueueIndexInternal(queueIndex + 1);
+            internalPlayNext();
             internalUpdate();
-            writeLog({kind: "automatic_next", opt: "start-playing",
+            writeLog({kind: "automatic_next_2", opt: "start-playing",
                 previous_song,
                 next_song: {name: getSongNT().name},
-                random_filter: songlistqueuefiltered.checked ? data.filter : null,
+                mode: nextmode.value as NextOpsID,
+                random_filter: data.filter,
             });
         }else if(action.kind === "skip_fwd") {
             const previous_song = getSongNT();
             data.play = true;
-            setQueueIndexInternal(queueIndex + 1);
+            internalPlayNext();
             internalUpdate();
-            writeLog({kind: "skip_fwd", opt: "start-playing",
+            writeLog({kind: "skip_fwd_2", opt: "start-playing",
                 previous_song,
                 next_song: {name: getSongNT().name},
-                random_filter: songlistqueuefiltered.checked ? data.filter : null,
+                mode: nextmode.value as NextOpsID,
+                random_filter: data.filter,
             });
         }else if(action.kind === "skip_back") {
             const previous_song = getSongNT();
             data.play = true;
-            setQueueIndexInternal(queueIndex - 1);
+            internalPlayPrev();
             internalUpdate();
             writeLog({kind: "skip_back", opt: "start-playing",
                 previous_song,
@@ -574,8 +619,8 @@ function MusicPlayer(mount: HTMLElement) {
             data.play = action.set === "toggle" ? !data.play : action.set;
             internalUpdate();
             writeLog({kind: data.play ? "play" : "pause"});
-        }else if(action.kind === "random_filter") {
-            songlistqueuefiltered.checked = action.set === "toggle" ? !songlistqueuefiltered.checked : action.set;
+        }else if(action.kind === "next_mode") {
+            nextmode.value = action.set;
         }else if(action.kind === "update_music_array") {
             data.musicUpdated++;
             internalUpdate();
@@ -684,12 +729,13 @@ function MusicPlayer(mount: HTMLElement) {
                     performAction({kind: "play", set: "toggle"});
                     notifier.notify({message: data.play ? "Playing" : "Pausing", timeout: 0.5, title: "Musicplayer"});
                 }else if(ipcmsg === "randomfiltertoggle") {
-                    performAction({kind: "random_filter", set: "toggle"});
-                    notifier.notify({message: songlistqueuefiltered.checked ? "Filter On" : "Filter Off", timeout: 0.5, title: "Musicplayer"});
+                    const cv = (nextmode.value as NextOpsID) === "random_filter"
+                    performAction({kind: "next_mode", set: cv ? "random" : "random_filter"});
+                    notifier.notify({message: cv ? "→ Random" : "→ Random (Filtered)", timeout: 0.5, title: "Musicplayer"});
                 }else if(ipcmsg === "randomfilteron") {
-                    performAction({kind: "random_filter", set: true});
+                    performAction({kind: "next_mode", set: "random_filter"});
                 }else if(ipcmsg === "randomfilteroff") {
-                    performAction({kind: "random_filter", set: false});
+                    performAction({kind: "next_mode", set: "random"});
                 }else if(ipcmsg === "listall") {
                     ipc.server.emit(socket, "message", {notice: "handled", results: data.music.map(mstr)});
                     return;
@@ -698,6 +744,21 @@ function MusicPlayer(mount: HTMLElement) {
                         .filter((a, i) => i > queueIndex - 8)
                         .map(m => m ? mstr(m) : "undefined")
                     });
+                    return;
+                }else if(ipcmsg === "listnextmodes") {
+                    type ResponseMsgType = {notice: "handled"; results: readonly (readonly [string, string])[]};
+                    const resmsg: ResponseMsgType = {notice: "handled", results: nextopts};
+                    ipc.server.emit(socket, "message", resmsg);
+                    return;
+                }else if(Array.isArray(ipcmsg) && (ipcmsg[0] === "setnextmode")) {
+                    const nnextmode = "" + ipcmsg[1];
+                    const nxtmv = nextopts.find(v => v[0] === nnextmode || v[1] === nnextmode);
+                    if(!nxtmv) {
+                        ipc.server.emit(socket, "message", {notice: "bad request"});
+                        notifier.notify({message: "Not Found Next Mode, "+(nxtmv), title: "Musicplayer"});
+                        return;
+                    }
+                    performAction({kind: "next_mode", set: nxtmv[1]});
                     return;
                 }else if(Array.isArray(ipcmsg) && (ipcmsg[0] === "playsong" || ipcmsg[0] === "queue")) {
                     const ipcmsg0 = ipcmsg[0] as "playsong" | "queue";
@@ -1726,7 +1787,7 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         const rescmd: string[][] = [];
         rescmd.push(["[", "!", "-f", getDistPath(), "]"]);
         if(data.from.active === "ytdl") {
-            let videoid = data.from.ytdl.videoid;
+            const videoid = data.from.ytdl.videoid;
             rescmd.push(["youtube-dl", videoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
             if(!videoid) missing.push("ytdl website");
             if(videoid.startsWith("-")) missing.push("ytdl website starts with '-'");

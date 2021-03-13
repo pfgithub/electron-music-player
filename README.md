@@ -84,6 +84,10 @@ Additionally, there is `musicplayer-msg listall/listqueue/playsong/queue`. Usage
 
 `node …/src/ipc.js queue (node …/src/ipc.js listall | rofi -dmenu -i)`
 
+Switching next modes:
+
+`musicplayer-msg setnextmode (musicplayer-msg listnextmodes | rofi -dmenu -i)`
+
 ## Contributing
 
 Use `yarn build-watch` to automatically build when you change a file. Use an editor plugin to see typescript errors
