@@ -499,6 +499,8 @@ function MusicPlayer(mount: HTMLElement) {
         .clss(".column.vgrid")
         .adto(cols);
 
+    let rfon_prevmode: NextOpsID = "random";
+
     const queue: (MusicData | undefined)[] = [];
     let queueIndex = 0;
 
@@ -730,8 +732,9 @@ function MusicPlayer(mount: HTMLElement) {
                     notifier.notify({message: data.play ? "Playing" : "Pausing", timeout: 0.5, title: "Musicplayer"});
                 }else if(ipcmsg === "randomfiltertoggle") {
                     const cv = (nextmode.value as NextOpsID) === "random_filter"
-                    performAction({kind: "next_mode", set: cv ? "random" : "random_filter"});
-                    notifier.notify({message: cv ? "→ Random" : "→ Random (Filtered)", timeout: 0.5, title: "Musicplayer"});
+                    if(!cv) rfon_prevmode = nextmode.value as NextOpsID;
+                    performAction({kind: "next_mode", set: cv ? rfon_prevmode : "random_filter"});
+                    notifier.notify({message: cv ? "→ "+nextopts.find(v => v[1] === rfon_prevmode)![0] : "→ Random (Filtered)", timeout: 0.5, title: "Musicplayer"});
                 }else if(ipcmsg === "randomfilteron") {
                     performAction({kind: "next_mode", set: "random_filter"});
                 }else if(ipcmsg === "randomfilteroff") {
