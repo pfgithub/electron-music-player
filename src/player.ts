@@ -535,14 +535,18 @@ function MusicPlayer(mount: HTMLElement) {
 
     function internalPlayNext() {
         const nxtmode = nextmode.value as NextOpsID;
+        const current_song = queue[queueIndex];
         queueIndex += 1;
         if(!queue[queueIndex]) {
             if(nxtmode === "random") {
-                queue[queueIndex] = randomOfArray(data.music);
+                const music_filtered = data.music;
+                queue[queueIndex] = randomOfArray(music_filtered.length === 1 ? music_filtered : music_filtered.filter(song => song !== current_song));
             }else if(nxtmode === "random_filter") {
-                queue[queueIndex] = randomOfArray(data.music.filter(song => playlistFilter(song, data.filter)));
+                const music_filtered = data.music.filter(song => song !== current_song && playlistFilter(song, data.filter));
+                queue[queueIndex] = randomOfArray(music_filtered.length === 1 ? music_filtered : music_filtered.filter(song => song !== current_song));
             }else if(nxtmode === "loop") {
                 queueIndex -= 1;
+                // TODO two dropdowns. one for automatic next behaviour ("next" | "loop") one for when next happens on an empty slot
             }else if(nxtmode === "end") {
                 // *do not* set queue[queueIndex] = undefined
                 // instead, leave an empty slot so .push will replace it
