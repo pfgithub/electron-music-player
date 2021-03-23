@@ -38,16 +38,64 @@ log.forEach(itm => {
     if(itm.opt === "start-playing") {
         if(!itm.previous_song.max_timestamp) return; // song hadn't even loaded by the time it got next'd || song is null
         total_time += itm.previous_song.timestamp;
-        if(!Object.hasOwnProperty.call(time_per_song, itm.previous_song.name)) time_per_song[itm.previous_song.name] = {name: itm.previous_song.name, c: 0, l: itm.previous_song.max_timestamp};
-        if(time_per_song[itm.previous_song.name].l.toFixed(3) !== itm.previous_song.max_timestamp.toFixed(3)) console.log("Uh oh! Max timestamps differ with "+itm.previous_song.name+". One: "+itm.previous_song.max_timestamp+", Two: "+time_per_song[itm.previous_song.name].l);
-        time_per_song[itm.previous_song.name].c += itm.previous_song.timestamp;
+        if(!Object.hasOwnProperty.call(time_per_song, itm.previous_song.name)) time_per_song[itm.previous_song.name] = {name: itm.previous_song.name, reasons: {}};
+        const pval = time_per_song[itm.previous_song.name];
+        const addWithReason = (reason) => {
+            if(!Object.hasOwnProperty.call(pval.reasons, reason)) pval.reasons[reason] = {time: 0, plays: 0};
+            const rsn = pval.reasons[reason];
+            rsn.time += itm.previous_song.timestamp;
+            rsn.plays += itm.previous_song.timestamp / itm.previous_song.max_timestamp;
+        };
+        addWithReason("all");
+        //if(itm.kind === "queue_immediate") {
+        //    addWithReason("intentional");
+        //}
+        // TODO:
+        // if (time >= 1616485573003) { // ← when prequeued was added (log entries need a version marker don't they)
+        // // :: when an item is added to the queue, +1 it
+        // // :: when an item is found with prequeued mode, if it was added to the queue, -1 it and mark it as 'intentional' + 'prequeued' else just mark it 'prequeued'
+        // // :: otherwise add it based on the mode it was found with
     }
 });
-time_per_song = Object.values(time_per_song).map(v => ({...v, count: v.c / v.l})).sort((a, b) => b.count - a.count);
-if(restricted_count) console.log("Past "+restricted_count+" days");
-else console.log("All time:");
+time_per_song = Object.values(time_per_song).sort((a, b) => b.reasons.all.plays - a.reasons.all.plays);
+if(restricted_count) console.log("Stats are from: Past "+restricted_count+" days");
+else console.log("Stats are from: All time (--restrict 25 to restrict to past 25 days)");
 console.log("total play time:",secToStr(total_time));
 console.log("by song:");
 time_per_song.map((s, i) => {
-    console.log((i+1)+": ", s.count.toFixed(2)+"×"+s.name + " : "+secToStr(s.c));
+    console.log(
+        ((i+1)+": ").padEnd(5),
+        (s.reasons.all.plays.toFixed(2)+"×").padStart(8)+" ",
+        cutoffsongname(s.name)+".mp3 ",
+        Object.entries(s.reasons).sort(([, a], [, b]) => b.plays - a.plays).map(([k, v]) => v.plays.toFixed(2) + "×" + k + "←" + secToStr(v.time)).join(", ")
+    );
 });
+
+function cutoffsongname(str) {
+    if(!str.endsWith(".mp3")) throw new Error("!.endsWith(.mp3)");
+    str = str.replace(/\.mp3$/, "");
+    str = str.split(" - ").map(it => it.trim()).join(" - ");
+    const dashsplit = str.split(" - ");
+    if(dashsplit.length === 2){// && str.length > 50) {
+        const [author, title] = dashsplit;
+        if(author.length > 25 - 3) {
+            if(title.length <= 25) {
+                return (cutoff(author, 50 - 3 - title.length).trim().padStart(50 - 3 - title.length) + " - " + title).trim().padEnd(50);
+            }
+        }
+        if(title.length > 25) {
+            if(author.length <= 25 - 3) {
+                return (author + " - " + cutoff(title, 50 - 3 - author.length).padEnd(50 - 3 - author.length)).trim().padStart(50);
+            }
+        }
+        return cutoff(author, 25 - 3).trim().padStart(25 - 3) + " - " + cutoff(title, 25);
+        //return cutoff(cutoff(author, 15).trim() + " - " + title, 50);
+    }else{
+        return cutoff(str, 50);
+    }
+}
+
+function cutoff(str, len) {
+    if(str.length <= len) return str.padEnd(len);
+    return (str.substring(0, len - 1) + (str.length > len - 1 ? "…" : "")).padEnd(len);
+}

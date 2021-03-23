@@ -458,7 +458,7 @@ function writeLog(action: LogAction) {
 }
 
 const nextopts = [["Random", "random"], ["Random (Filtered)", "random_filter"], ["Loop", "loop"], ["End", "end"]] as const;
-type NextOpsID = (typeof nextopts)[number][1];
+type NextOpsID = (typeof nextopts)[number][1] | "prequeued";
 function MusicPlayer(mount: HTMLElement) {
     const defer = makeDefer();
 
@@ -533,10 +533,11 @@ function MusicPlayer(mount: HTMLElement) {
     //     data.nowPlayingUpdated += 1;
     // }
 
-    function internalPlayNext() {
+    function internalPlayNext(): boolean {
         const nxtmode = nextmode.value as NextOpsID;
         const current_song = queue[queueIndex];
         queueIndex += 1;
+        let res = false;
         if(!queue[queueIndex]) {
             if(nxtmode === "random") {
                 const music_filtered = data.music;
@@ -551,11 +552,13 @@ function MusicPlayer(mount: HTMLElement) {
                 // *do not* set queue[queueIndex] = undefined
                 // instead, leave an empty slot so .push will replace it
             }else assertNever(nxtmode);
+            res = true;
         }
         // don't have [«song», , ] in the list. max [«song», ].
         if(!queue[queueIndex] && !queue[queueIndex - 1]) queueIndex -= 1;
         data.nowPlaying = queue[queueIndex];
         data.nowPlayingUpdated += 1;
+        return res;
     }
     function internalPlayPrev() {
         queueIndex -= 1;
@@ -593,23 +596,23 @@ function MusicPlayer(mount: HTMLElement) {
         }else if(action.kind === "automatic_next") {
             const previous_song = getSongNT();
             data.play = true;
-            internalPlayNext();
+            const did_skip = internalPlayNext();
             internalUpdate();
             writeLog({kind: "automatic_next_2", opt: "start-playing",
                 previous_song,
                 next_song: {name: getSongNT().name},
-                mode: nextmode.value as NextOpsID,
+                mode: did_skip ? nextmode.value as NextOpsID : "prequeued",
                 random_filter: data.filter,
             });
         }else if(action.kind === "skip_fwd") {
             const previous_song = getSongNT();
             data.play = true;
-            internalPlayNext();
+            const did_skip = internalPlayNext();
             internalUpdate();
             writeLog({kind: "skip_fwd_2", opt: "start-playing",
                 previous_song,
                 next_song: {name: getSongNT().name},
-                mode: nextmode.value as NextOpsID,
+                mode: did_skip ? nextmode.value as NextOpsID : "prequeued",
                 random_filter: data.filter,
             });
         }else if(action.kind === "skip_back") {
