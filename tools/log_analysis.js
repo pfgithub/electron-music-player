@@ -36,7 +36,7 @@ let time_per_song = {};
 log.forEach(itm => {
     if(restricted_count && itm.time < Date.now() - restricted_count * days_in_ms) return;
     if(itm.opt === "start-playing") {
-        if(!itm.previous_song.max_timestamp) return; // song hadn't even loaded by the time it got next'd || song is null
+        if(!itm.previous_song.max_timestamp || !itm.previous_song.name) return; // song hadn't even loaded by the time it got next'd || song is null
         total_time += itm.previous_song.timestamp;
         if(!Object.hasOwnProperty.call(time_per_song, itm.previous_song.name)) time_per_song[itm.previous_song.name] = {name: itm.previous_song.name, reasons: {}};
         const pval = time_per_song[itm.previous_song.name];
@@ -72,7 +72,7 @@ time_per_song.map((s, i) => {
 });
 
 function cutoffsongname(str) {
-    if(!str.endsWith(".mp3")) throw new Error("!.endsWith(.mp3)");
+    if(!str.endsWith(".mp3")) throw new Error("!.endsWith(.mp3) : "+str);
     str = str.replace(/\.mp3$/, "");
     str = str.split(" - ").map(it => it.trim()).join(" - ");
     const dashsplit = str.split(" - ");
