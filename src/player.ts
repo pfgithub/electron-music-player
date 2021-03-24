@@ -551,6 +551,8 @@ function MusicPlayer(mount: HTMLElement) {
             }else if(nxtmode === "end") {
                 // *do not* set queue[queueIndex] = undefined
                 // instead, leave an empty slot so .push will replace it
+            }else if(nxtmode === "prequeued") {
+                assertNever(0 as never);
             }else assertNever(nxtmode);
             res = true;
         }
