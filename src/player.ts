@@ -156,7 +156,7 @@ body {
 .nowplaying_lyrics {
 	user-select: text;
 }
-body > div {
+.emp-mount > div {
 	padding: 20px;
 }
 ::-webkit-scrollbar {
@@ -307,19 +307,14 @@ li:hover .itembuttons {
     animation: particle 1s;
     animation-fill-mode: both;
 }
+html {height: 100%;}
+body {height: 100%;}
 .lyricsedtr {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    max-height: 100vh;
-    height: 100vh;
-    box-sizing: border-box;
-    overflow-y: scroll;
-    z-index: 20;
+	padding: 20px;
     background-color: var(--background);
     color: var(--foreground);
-    transform: translate3d(0, 0, 0); /*hack to increase performance significantly*/
+    height: 100%;
+    box-sizing: border-box;
     & h1, & h2 {
     	user-select: text;
     }
@@ -1074,7 +1069,9 @@ function listMusicElem(parent: HTMLElement, data: Data) {
     return res;
 }
 
-const musicPlayer = MusicPlayer(body);
+const mpmount = el("div").clss("emp-mount").adto(body);
+
+const musicPlayer = MusicPlayer(mpmount);
 
 const savedregex = { regex: new RegExp(""), text: "" };
 
@@ -1303,6 +1300,9 @@ function randomOfArray<T>(array: T[]): T {
 function showLyricsEditor(song: MusicData, songtags: SongTags, onclose: () => void) {
     const defer = makeDefer();
     defer(() => onclose());
+
+    mpmount.style.display = "none";
+    defer(() => mpmount.style.display = "");
 
     const win = el("div")
         .adto(body)
@@ -1668,6 +1668,9 @@ function joinBetween<T, U>(a: T[], v: U): (T | U)[] {
 
 function songAddPanel(outerData: Data, onclose: () => void) {
     const defer = makeDefer();
+
+    mpmount.style.display = "none";
+    defer(() => mpmount.style.display = "");
 
     const mainel = el("div")
         .clss(".lyricsedtr.vgrid") // TODO rename
