@@ -872,26 +872,29 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
             data.performAction({kind: "update_music_array"});
         });
     });
+    let timingModeOn = false;
+    let lyricTimes: number[] = [];
     timeButton.onev("click", () => {
-        // before each line, put a blank spot. at the top line, have it show the time of the media player.
-        // when you click a line, set its time to the time of the current media player time
-        // then go to the next line
-        // you can click further than the next line or something
-        // also skip lines starting with [ or __FAVORITE__ or blank
-        //
-        alert("TODO!");
+        timingModeOn =! timingModeOn;
+        if(!timingModeOn) {
+            buttonbar.appendChild(el("div").atxt(JSON.stringify(lyricTimes)));
+        }else{
+            lyricTimes = [];
+        }
+        res.update();
     });
     
     function refillLyrics(lyrics: string) {
         lyricContainer.innerHTML = "";
-        for(const line of lyrics.split("\n")) {
+
+        lyrics.split("\n").forEach((line, i) => {
             const dv = el("div").clss("lyricline").atxt(line).adto(lyricContainer).adch(el("br"));
-            dv.onev("click", () => {
-                // TODO jump to time code
-                // const ct = data.elAudio!.currentTime;
-                // dv.prepend(el("span").atxt("" + ct));
+            dv.onev("mousedown", () => {
+                if(timingModeOn) {
+                    lyricTimes[i] = data.elAudio!.currentTime;
+                }
             });
-        }
+        });
     }
 
     const res = {
@@ -920,6 +923,7 @@ function lyricViewElem(parent: HTMLElement, data: Data) {
                     timeButton.textContent = "…";
                 }
             }
+            timeButton.classList.toggle("unimportant", !timingModeOn);
         },
     };
     return res;
