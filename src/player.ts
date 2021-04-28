@@ -679,9 +679,11 @@ function MusicPlayer(mount: HTMLElement) {
                 }
             } else {
                 const lstat = fs.statSync(musicPath);
+                const collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
                 if (lstat.isDirectory()) {
                     return fs
                         .readdirSync(musicPath)
+                        .sort(collator.compare)
                         .forEach(subPath => data.addMusic(path.join(musicPath, subPath), depth + 1));
                 }
             }
