@@ -1,6 +1,8 @@
 const fs = require("fs");
 
 let restricted_count = undefined;
+let sort_by = "play-count";
+const sort_types = ["play-count", "hours"];
 
 const args = [...process.argv];
 args.shift(); args.shift();
@@ -12,6 +14,12 @@ while(args.length) {
     }else if(arg === "--help") {
         console.log("help: look at the source code, the arg parsing code is at the top. recommended use `| less` to view output");
         process.exit(1);
+    }else if(arg === "--sort") {
+        sort_by = args.shift();
+        if(!sort_types.includes(sort_by)) {
+            console.log("--sort ["+sort_types.join(" | ")+"]");
+            process.exit(1);
+        }
     }else throw new Error("bad argument : "+arg);
 }
 
@@ -57,7 +65,13 @@ log.forEach(itm => {
         // // :: otherwise add it based on the mode it was found with
     }
 });
-time_per_song = Object.values(time_per_song).sort((a, b) => b.reasons.all.plays - a.reasons.all.plays);
+time_per_song = Object.values(time_per_song).sort((a, b) => {
+    if(sort_by === "play-count") {
+        return b.reasons.all.plays - a.reasons.all.plays;
+    }else if(sort_by === "hours") {
+        return b.reasons.all.time - a.reasons.all.time;
+    }else throw new Error("unreachable");
+});
 if(restricted_count) console.log("Stats are from: Past "+restricted_count+" days");
 else console.log("Stats are from: All time (--restrict 25 to restrict to past 25 days)");
 console.log("total play time:",secToStr(total_time));
