@@ -2,9 +2,9 @@
 
 A simple music player in electron
 
-![screenshot](.github/demo-2020-09-16.png)
+![screenshot](.github/demo-2021-06-15.png)
 
-![screenshot](.github/demo-edit-2020-09-16.png)
+![screenshot](.github/demo-edit-2021-06-15.png)
 
 Music is loaded from ~/Music/\*\*\*.mp3 by default.
 
