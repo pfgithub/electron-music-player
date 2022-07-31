@@ -65,7 +65,7 @@
     },
     "dependencies": {
         "color": "^3.1.0",
-        "electron": "^6.0.0",
+        "electron": "^19.0.10",
         "ffmetadata": "^1.6.0",
         "lyricist": "^2.2.2",
         "music-metadata": "^7.4.0",

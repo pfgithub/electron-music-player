@@ -24,6 +24,7 @@ function createWindow() {
         titleBarStyle: "hidden",
         webPreferences: {
             nodeIntegration: true,
+            contextIsolation: false,
         },
     });
 
