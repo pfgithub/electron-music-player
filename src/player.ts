@@ -1809,9 +1809,9 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         rescmd.push(["[", "!", "-f", getDistPath(), "]"]);
         if(data.from.active === "ytdl") {
             const videoid = data.from.ytdl.videoid;
-            rescmd.push(["youtube-dl", videoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
-            if(!videoid) missing.push("ytdl website");
-            if(videoid.startsWith("-")) missing.push("ytdl website starts with '-'");
+            rescmd.push(["yt-dlp", videoid, "--user-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "--extract-audio", "--audio-format", "mp3", "-o", `dnl0."%(ext)s"`]);
+            if(!videoid) missing.push("yt-dlp website");
+            if(videoid.startsWith("-")) missing.push("yt-dlp website starts with '-'");
         }else if(data.from.active === "file") {
             rescmd.push(["cp", data.from.file.filepath, "dnl0.mp3"]);
             if(!data.from.file.filepath) missing.push("file not chosen");
@@ -1849,7 +1849,7 @@ function songAddPanel(outerData: Data, onclose: () => void) {
         ` : html`
             <h2>File:</h2>
             <div class="tablist">
-                <button class=${"lyricsedtr-button"+(data.from.active === "ytdl" ? "" : " unimportant")} onclick=${() => setTab("ytdl")}>youtube-dl</button>
+                <button class=${"lyricsedtr-button"+(data.from.active === "ytdl" ? "" : " unimportant")} onclick=${() => setTab("ytdl")}>yt-dlp</button>
                 <button class=${"lyricsedtr-button"+(data.from.active === "file" ? "" : " unimportant")} onclick=${() => setTab("file")}>Local File</button>
             </div>
             ${data.from.active === "ytdl" ? html`
